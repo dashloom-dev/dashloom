@@ -4,8 +4,8 @@ export const siteConfig = {
   url: 'https://dashloom.dev',
   github: 'https://github.com/dashloom-dev/dashloom',
   supportEmail: 'support@dashloom.dev',
-  tagline: 'Every product signal, in one view.',
-  description: 'An open-source, Cloudflare-native command center for multi-product analytics, search performance, and business metrics.',
+  tagline: 'Turn every product signal into your next move.',
+  description: 'An open-source AI product intelligence platform that monitors product data, explains change, and delivers actionable reports.',
   locales: ['en', 'zh'] as const,
   defaultLocale: 'en' as const,
 } as const;

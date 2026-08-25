@@ -14,6 +14,14 @@ const products = [
 
 const sources = ['Cloudflare Workers', 'Google Analytics 4', 'Search Console', 'D1 metrics'];
 
+const intelligenceViews = [
+  ['Indie Hacker', 'Portfolio Analyst', 'Products, traffic, revenue, and operations'],
+  ['SaaS Revenue', 'Revenue Analyst', 'MRR, churn, retention, and expansion'],
+  ['SEO Growth', 'SEO Growth Analyst', 'Queries, pages, rankings, and competitors'],
+  ['Cloudflare Operations', 'Operations Analyst', 'Requests, errors, latency, Workers, and D1'],
+  ['Agency Client', 'Client Reporting Analyst', 'Client KPIs, anomalies, and recurring delivery'],
+];
+
 export default function Home() {
   return (
     <main>
@@ -37,9 +45,9 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
-        <div className="eyebrow"><span />Open source · Self-hosted · Cloudflare-native</div>
-        <h1>Every product signal,<br /><em>in one view.</em></h1>
-        <p className="hero-copy">Connect Cloudflare, Google Analytics, Search Console, and your business metrics. Know what is growing, what is breaking, and where to focus next.</p>
+        <div className="eyebrow"><span />Open source · AI-powered · Cloudflare-native</div>
+        <h1>Turn every product signal<br /><em>into your next move.</em></h1>
+        <p className="hero-copy">Connect operations, acquisition, search, revenue, and competitor data. Dashloom&apos;s specialized agents explain what changed, why it matters, and what to do next.</p>
         <div className="hero-actions">
           <a className="button" href="https://github.com/dashloom-dev/dashloom">Start self-hosting <span>↗</span></a>
           <a className="button button-secondary" href="#preview">Explore the dashboard <span>↓</span></a>
@@ -73,6 +81,11 @@ export default function Home() {
             <div className="metric-grid">
               {metrics.map((metric) => <article className={`metric-card ${metric.tone}`} key={metric.label}><p>{metric.label}</p><strong>{metric.value}</strong><small>{metric.note}</small></article>)}
             </div>
+            <div className="agent-brief">
+              <div className="agent-orb">AI</div>
+              <div><span>PORTFOLIO ANALYST · DAILY BRIEF</span><strong>Nimbus is driving 61% of this week&apos;s revenue growth.</strong><p>Search traffic rose after three pages entered the top 10, while Pulse Monitor&apos;s error rate needs attention. Review 4 evidence-linked findings.</p></div>
+              <button>Open analysis →</button>
+            </div>
             <div className="trend-card">
               <div className="card-heading"><div><h3>Global trend</h3><p>Core metrics across every product</p></div><div className="legend"><span className="mint-dot" />Requests <span className="blue-dot" />Users <span className="violet-dot" />Clicks</div></div>
               <div className="chart" aria-label="Sample product metrics chart">
@@ -95,21 +108,26 @@ export default function Home() {
 
       <section className="source-strip" aria-label="Supported data sources"><p>One operating layer for</p><div>{sources.map((source) => <span key={source}><i />{source}</span>)}</div></section>
 
+      <section className="intelligence-section" id="intelligence">
+        <div className="section-intro"><span>FIVE VIEWS · SPECIALIZED AGENTS</span><h2>One data layer.<br />Five ways to grow.</h2><p>Start with the dashboard that matches your operating model. Enable more views without importing the same data twice.</p></div>
+        <div className="intelligence-grid">{intelligenceViews.map(([name, agent, copy], index) => <article key={name}><b>0{index + 1}</b><span>{name} Dashboard</span><h3>{agent}</h3><p>{copy}</p><a href="/docs">Explore capability →</a></article>)}</div>
+      </section>
+
       <section className="value-section" id="why">
-        <div className="section-intro"><span>WHY DASHLOOM</span><h2>Stop running your products<br />from a pile of tabs.</h2></div>
+        <div className="section-intro"><span>WHY DASHLOOM</span><h2>Go beyond seeing data.<br />Understand what changed.</h2></div>
         <div className="value-grid">
-          <article><b>01</b><h3>See the whole portfolio</h3><p>Compare product health, acquisition, search visibility, and revenue without stitching together spreadsheets.</p></article>
-          <article><b>02</b><h3>Own the deployment</h3><p>Run Dashloom in your Cloudflare account. Your configuration stays separate from anyone else&apos;s project.</p></article>
-          <article><b>03</b><h3>Act before numbers drift</h3><p>Connector health and freshness make missing data visible, so silence never looks like a healthy zero.</p></article>
+          <article><b>01</b><h3>Ask with evidence</h3><p>Every important answer links back to products, metrics, periods, sources, and data freshness—not a confident guess.</p></article>
+          <article><b>02</b><h3>Wake up to the brief</h3><p>Agents monitor changes and prepare daily, weekly, and monthly reports for email, Slack, Discord, or webhooks.</p></article>
+          <article><b>03</b><h3>Choose how AI runs</h3><p>Self-host with your own OpenAI-compatible API, or use managed AI allowances and reliable delivery in Dashloom Cloud.</p></article>
         </div>
       </section>
 
       <section className="open-section" id="open-source">
-        <div><span className="eyebrow"><span />Built in public</span><h2>Start with the code.<br />Stay for the clarity.</h2></div>
-        <div className="open-copy"><p>Deploy the community edition, connect your own accounts, and keep control of your data. Dashloom Cloud will add managed sync, alerts, and team workflows—not lock away the core experience.</p><a className="button" href="https://github.com/dashloom-dev/dashloom">View on GitHub <span>↗</span></a></div>
+        <div><span className="eyebrow"><span />Open intelligence layer</span><h2>Bring your data.<br />Bring your model.</h2></div>
+        <div className="open-copy"><p>Community users can deploy Dashloom and connect an OpenAI-compatible API endpoint, key, and model. Dashloom Cloud adds managed AI allowances, scheduled analysis, delivery, and operational reliability.</p><a className="button" href="https://github.com/dashloom-dev/dashloom">View on GitHub <span>↗</span></a></div>
       </section>
 
-      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></a><p>Every product signal, in one view.</p><span>© 2026 Dashloom</span></footer>
+      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></a><p>Turn every product signal into your next move.</p><span>© 2026 Dashloom</span></footer>
     </main>
   );
 }

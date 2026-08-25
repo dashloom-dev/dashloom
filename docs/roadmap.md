@@ -20,29 +20,43 @@ Dashloom is developed in small, verifiable product slices. Dates are intentional
 - [ ] Idempotent manual synchronization
 - [ ] Connector health and useful error recovery
 
-## Milestone 3 — Google and automation
+## Milestone 3 — Google and reliable analytics
 
 - [ ] Google OAuth with PKCE
 - [ ] Multiple Google accounts
 - [ ] GA4 and Search Console resource discovery
 - [ ] Product-to-resource mapping
 - [ ] Scheduled sync, queues, retries, and limits
-- [ ] Email reports and threshold alerts
+- [ ] Deterministic period comparisons, anomaly detection, and evidence bundles
 
-## Milestone 4 — Managed Dashloom Cloud
+## Milestone 4 — AI product intelligence
+
+- [ ] Five dashboard presets: Indie Hacker, SaaS Revenue, SEO Growth, Cloudflare Operations, and Agency Client
+- [ ] Workspace-scoped agent profiles and permission boundaries
+- [ ] Bring-your-own OpenAI-compatible endpoint, API key, and model
+- [ ] Evidence-linked conversational analysis
+- [ ] Portfolio, revenue, SEO, operations, and client-reporting agent skills
+- [ ] Prompt-injection, data-minimization, cost, and evaluation tests
+
+## Milestone 5 — Reports and managed Dashloom Cloud
 
 - [ ] Hosted registration and account recovery
 - [ ] Team invitations and role-based access
-- [ ] Usage quotas and data retention
+- [ ] Plan-based managed AI allowances and append-only usage ledger
+- [ ] Daily, weekly, and monthly report workflows
+- [ ] Email, Slack, Discord, and webhook delivery with retries
+- [ ] Usage quotas, observability, and data retention
 - [ ] Subscription billing and entitlements
 - [ ] Export, deletion, audit, backup, and recovery
 
-## Milestone 5 — Ecosystem
+## Milestone 6 — Ecosystem
 
 - [ ] Stripe and merchant connectors
 - [ ] Vercel, Supabase, GitHub, and additional Cloudflare products
 - [ ] Connector SDK and validation tools
+- [ ] Competitor data sources and comparison views
+- [ ] Agent skill SDK, manifests, validation tools, and evaluations
 - [ ] Shareable dashboards and templates
 - [ ] Agency workspaces, white label, and private deployment support
 
-Feature requests are welcome, but new work should reinforce the core promise: helping people running multiple products see operational, acquisition, search, and business signals in one place.
+Feature requests are welcome, but new work should reinforce the core promise: turn trustworthy product signals into evidence-linked explanations, recommended actions, and recurring reports.

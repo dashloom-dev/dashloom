@@ -8,11 +8,11 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://dashloom.dev'),
-  title: 'Dashloom — Open-source multi-product analytics dashboard',
-  description: 'Monitor Cloudflare, Google Analytics, Search Console, and business metrics across every product from one open-source dashboard.',
+  title: 'Dashloom — Open-source AI product intelligence',
+  description: 'Connect product data, explain change with specialized agents, and deliver evidence-linked reports from one open-source platform.',
   alternates: { canonical: '/', languages: { en: '/', zh: '/zh', 'x-default': '/' } },
-  openGraph: { title: 'Dashloom — Every product signal, in one view.', description: 'A Cloudflare-native command center for indie hackers and small product teams.', url: 'https://dashloom.dev', siteName: 'Dashloom', type: 'website', images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Dashloom product analytics dashboard' }] },
-  twitter: { card: 'summary_large_image', title: 'Dashloom', description: 'Every product signal, in one view.', images: ['/og.png'] },
+  openGraph: { title: 'Dashloom — Turn every product signal into your next move.', description: 'Open-source AI product intelligence for indie hackers and small product teams.', url: 'https://dashloom.dev', siteName: 'Dashloom', type: 'website', images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Dashloom AI product intelligence dashboard' }] },
+  twitter: { card: 'summary_large_image', title: 'Dashloom', description: 'Turn every product signal into your next move.', images: ['/og.png'] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

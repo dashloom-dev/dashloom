@@ -11,7 +11,11 @@ Server routes and actions
           ↓
 Workspace domain services
           ↓
-D1 repositories and provider adapters
+Evidence builder and deterministic analytics
+          ↓
+Agent / workflow orchestration
+          ↓
+D1 repositories, provider adapters, and delivery adapters
 ```
 
 The browser must not decide workspace authorization, decrypt credentials, accept provider callbacks as trusted, or grant paid entitlements.
@@ -26,7 +30,15 @@ The browser must not decide workspace authorization, decrypt credentials, accept
 | External connections | `connector_accounts` | Provider account and encrypted server credential |
 | Resource mapping | `product_connector_mappings` | Maps an external resource to one product |
 | Time-series values | `metric_points` | Workspace and product scoped metric identity |
+| Competitor facts | `competitors`, `competitor_metric_points` | Approved external entities, metrics, and provenance |
 | Collection state | `sync_runs` | Observable, retryable provider synchronization |
+| AI connection | `ai_provider_accounts` | BYOK or managed provider configuration; secrets remain server-side |
+| Dashboard preset | `dashboard_views` | Workspace views over shared normalized data |
+| Agent configuration | `agent_profiles` | Role, provider, permissions, and structured instructions |
+| Analysis execution | `analysis_runs` | Evidence, lifecycle, findings, tokens, and errors |
+| AI usage | `ai_usage_events` | Append-only, idempotent usage and estimated cost ledger |
+| Generated report | `reports` | Evidence-derived daily, weekly, monthly, or manual output |
+| Delivery | `delivery_channels`, `report_deliveries` | Encrypted channel configuration and retryable delivery state |
 
 Identity records are intentionally not defined by the product schema. A supported authentication library will own users, sessions, verification, password reset, and OAuth accounts. Dashloom only stores stable user identifiers in workspace ownership and membership records.
 
@@ -45,6 +57,24 @@ Every provider connector must eventually implement:
 
 Until all eight conditions exist, a provider may appear in roadmap documentation but must not be described as production-ready.
 
+## Analysis boundary
+
+Dashloom calculates revenue, growth rates, comparisons, anomalies, and data-quality facts in deterministic server modules before invoking an LLM. The model receives a bounded evidence bundle and returns structured findings; it does not query arbitrary workspace tables or redefine metric truth.
+
+Every important finding must retain source, entity, metric, period, freshness, and calculation provenance. Imported provider content is untrusted data and cannot override system instructions or grant tools permission.
+
+Short conversational turns can run through a workspace-scoped Agent. Recurring and multi-step report generation belongs in durable Workflows with idempotent run and delivery keys. Agent schedules wake the appropriate workspace process; they do not replace the report ledger.
+
+## AI provider and entitlement boundary
+
+- Community deployments may configure an OpenAI-compatible endpoint, model, and encrypted API key.
+- Custom endpoints must pass server-side HTTPS and outbound-network validation; redirects, DNS resolution, and private address ranges are checked to prevent SSRF.
+- Managed Cloud credentials never enter the browser and are separate from BYOK records.
+- Plan allowances come from a server-owned catalog.
+- Each managed or BYOK call records an append-only usage event.
+- A browser-displayed remaining balance is informational, not authorization to spend.
+- Failed or duplicate runs must not consume a managed allowance twice.
+
 ## Multi-tenant invariant
 
 Every query and mutation involving products, connectors, metrics, or sync runs must resolve a trusted server-side workspace membership before accessing data. A workspace ID supplied by the browser is a selector, not proof of authorization.
@@ -55,6 +85,8 @@ Every query and mutation involving products, connectors, metrics, or sync runs m
 2. Cloudflare account connection and Workers Analytics collection.
 3. Google OAuth with GA4 and Search Console discovery.
 4. Scheduled jobs, retries, connector health, and diagnostics.
-5. Reports, alerts, subscriptions, and hosted Cloud operations.
+5. BYOK analysis, evidence-linked chat, and dashboard presets.
+6. Scheduled reports, delivery channels, and managed AI allowances.
+7. Subscriptions, competitor intelligence, and hosted Cloud operations.
 
 Payment work will introduce its own server-owned catalog, orders, provider event ledger, subscription state machine, and entitlement periods. Browser redirects will never be treated as payment truth.
