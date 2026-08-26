@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent_skill",
+  "publisher": { "name": "Example Publisher", "github": "example-publisher" },
+  "summary": "Describe the evidence-backed decision this Skill helps a Dashloom user make.",
+  "license": "MIT",
+  "source": {
+    "repository": "https://github.com/example-publisher/example-skill",
+    "commit": "0123456789abcdef0123456789abcdef01234567"
+  },
+  "manifest": {
+    "slug": "example-skill",
+    "name": "Example Skill",
+    "version": "1.0.0",
+    "basePreset": "portfolio_analyst",
+    "instructions": "Prioritize material evidence and recommend one bounded verification step without inventing causes.",
+    "requiredMetrics": []
+  }
+}

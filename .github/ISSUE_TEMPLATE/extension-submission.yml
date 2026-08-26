@@ -1,0 +1,40 @@
+name: Community extension proposal
+description: Propose an Agent Skill or connector before preparing a pull request.
+title: "[Extension]: "
+labels: [extension]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Extension kind
+      options: [Agent Skill, Connector]
+    validations: { required: true }
+  - type: input
+    id: repository
+    attributes:
+      label: Public source repository
+      placeholder: https://github.com/owner/repository
+    validations: { required: true }
+  - type: textarea
+    id: decision
+    attributes:
+      label: User decision and evidence
+      description: Explain the target user, decision, required metrics, output, and why an existing extension is insufficient.
+    validations: { required: true }
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Data and permissions
+      description: List every external API, permission, stored field, retention behavior, and data explicitly excluded.
+    validations: { required: true }
+  - type: checkboxes
+    id: declarations
+    attributes:
+      label: Publisher declarations
+      options:
+        - label: The source and license are public and I have the right to submit them.
+          required: true
+        - label: The extension does not request secrets, execute arbitrary code, override Agent safety rules, or bypass evidence citations.
+          required: true
+        - label: I understand that submission, maintainer review, and independent review are different states.
+          required: true

@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   validate:
@@ -21,6 +22,34 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm test
+      - run: npm run validate:extensions
+      - run: npm run validate:connector-worker
+      - name: Verify independent extension review
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const files = await github.paginate(github.rest.pulls.listFiles, { owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100 });
+            const extensionDirectories = [...new Set(files
+              .map(file => file.filename.match(/^(extensions\/community\/[^/]+)\/(submission|review)\.json$/)?.[1])
+              .filter(Boolean))];
+            if (!extensionDirectories.length) return;
+            const reviews = await github.paginate(github.rest.pulls.listReviews, { owner: context.repo.owner, repo: context.repo.repo, pull_number: context.issue.number, per_page: 100 });
+            for (const directory of extensionDirectories) {
+              const submissionPath = `${directory}/submission.json`;
+              if (!fs.existsSync(submissionPath)) continue;
+              const submission = JSON.parse(fs.readFileSync(submissionPath, 'utf8'));
+              const publisher = submission.publisher.github.toLowerCase();
+              const reviewPath = `${directory}/review.json`;
+              if (!fs.existsSync(reviewPath)) { core.setFailed(`${submissionPath} needs review.json from an independent reviewer.`); continue; }
+              const attestation = JSON.parse(fs.readFileSync(reviewPath, 'utf8'));
+              if (attestation.pullRequest !== context.issue.number) { core.setFailed(`${reviewPath} must reference pull request ${context.issue.number}.`); continue; }
+              const reviewer = attestation.reviewerGithub.toLowerCase();
+              const approval = reviews.find(review => review.state === 'APPROVED' && review.commit_id === context.payload.pull_request.head.sha && review.user.login.toLowerCase() === reviewer && reviewer !== publisher && reviewer !== context.payload.pull_request.user.login.toLowerCase());
+              if (!approval) core.setFailed(`${submissionPath} needs an APPROVED review on the current head commit from someone other than the publisher and pull-request author.`);
+            }
       - run: npm run db:generate
       - name: Verify generated migrations are committed
         run: git diff --exit-code -- drizzle

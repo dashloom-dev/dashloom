@@ -1,0 +1,30 @@
+/* Authenticated product typography: operational evidence must remain readable at 100% zoom. */
+.product-app { font-size:16px; line-height:1.5; }
+.product-app small { font-size:14px; line-height:1.55; }
+.product-app button,.product-app input,.product-app select,.product-app textarea { font-size:14px; }
+.product-sidebar nav a { min-height:42px; font-size:15px; }
+.workspace-switcher small,.view-navigation>small,.view-navigation b { font-size:14px; }
+.view-navigation>a,.app-signout,.workspace-support { font-size:14px; }
+.product-user strong,.product-user small { font-size:14px; }
+.app-page-head>div>span,.panel-title span,.agent-highlight span,.section-label span { font-size:14px; }
+.app-page-head p { font-size:16px; }
+.panel-title a,.status-pill,.report-row>b,.analysis-result>header,.finding-evidence code,.evidence-row em { font-size:14px; }
+.real-product-list small,.sync-list-real small,.agent-catalog p,.agent-catalog b,.agent-evidence span,.agent-composer small,.finding small,.metric-import footer small,.connector-form footer small,.view-metric-grid small,.evidence-row small,.evidence-row span,.google-accounts small,.google-accounts span,.conversation-list small { font-size:14px; }
+.real-product-list b,.report-row small,.report-row>span,.resource-card footer,.resource-card footer span,.resource-card footer a,.form-message,.context-note,.google-controls>header span,.google-controls label,.agency-products legend,.action-backfill small { font-size:14px; }
+.agent-catalog p,.connector-form footer small,.metric-import footer small,.finding small { line-height:1.6; }
+
+/* Component-level rules used to dip as low as 9–13px. Keep every actionable or evidentiary label at 14px. */
+.real-metric-grid span,.real-metric-grid small,.activation-steps>a>b,.activation-steps small,.products-table article.header,.action-filters a,.panel-empty a,.agent-highlight>a,.product-coverage-card>header span,.product-coverage-card>header>b,.coverage-stats small,.coverage-chips span,.marketplace-card>header span,.marketplace-card>header>b,.marketplace-meta span,.marketplace-signals code,.marketplace-card>footer strong,.marketplace-card>footer small,.marketplace-card>footer span>a,.ingestion-steps pre,.ingestion-steps dt,.alert-event-history span small,.alert-event-history b,.alert-event-history em,.schedule-row em,.schedule-actions button { font-size:14px; }
+.product-app article>span,.product-app footer>span,.product-app footer>a,.product-app li>span,.product-app li>b { font-size:14px; }
+.activation-center>header span,.agent-playbook>header span,.agent-playbook>header>b,.agent-playbook footer small,.agent-playbook legend,.comparison-form footer small,.connector-account-manager .panel-title>b,.conversation-list header a,.conversation-list strong,.conversation-list>p,.danger-zone p,.danger-zone label,.product-app code,.product-app .app-secondary { font-size:14px; }
+.agent-highlight p { font-size:15px; }
+.product-sidebar>.brand>div,.product-user>div,.product-goal-grid header span,.product-goal-grid header>b,.product-goal-grid>article>small,.coverage-block>strong,.product-coverage-card>footer small { font-size:14px; }
+.agent-composer label,.agent-context li,.comparison-form label,.comparison-form legend { font-size:14px; }
+.finding p,.comparison-provider b { font-size:14px; }
+.executive-specialist-grid small,.executive-brief-form>footer small,.executive-history>a small,.executive-history>a>b,.executive-priorities>article>header span,.executive-priorities>article>div strong,.executive-priorities>article>footer,.executive-specialist-results>a small,.executive-specialist-results>a b { font-size:14px; }
+.mission-launch summary,.mission-launch label,.mission-launch footer small,.mission-launched,.mission-refresh small,.mission-cancel small,.mission-summary span,.mission-summary small,.mission-card>header span,.mission-values small,.mission-card>footer>small,.mission-card>aside { font-size:14px; }
+
+@media(max-width:620px) {
+  .app-page-head p { font-size:15px; }
+  .product-app button,.product-app input,.product-app select,.product-app textarea { font-size:16px; }
+}

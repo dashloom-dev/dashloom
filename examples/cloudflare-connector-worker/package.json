@@ -1,0 +1,16 @@
+{
+  "name": "dashloom-cloudflare-connector-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit && wrangler types worker-configuration.d.ts --check --config wrangler.jsonc && wrangler deploy --dry-run --config wrangler.jsonc --outdir dist",
+    "dev": "wrangler dev --config wrangler.jsonc --test-scheduled",
+    "types": "wrangler types worker-configuration.d.ts --config wrangler.jsonc",
+    "deploy": "wrangler deploy --config wrangler.jsonc"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "wrangler": "^4.125.0"
+  }
+}

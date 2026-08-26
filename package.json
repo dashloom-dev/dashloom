@@ -1,5 +1,5 @@
 {
-  "name": "dashloom",
+  "name": "dashloom-community",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -11,13 +11,29 @@
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "typecheck": "tsc --noEmit"
+    "db:migrate:local": "wrangler d1 migrations apply site-creator-d1 --local",
+    "db:status:local": "wrangler d1 migrations list site-creator-d1 --local",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "validate:extensions": "node --experimental-strip-types scripts/validate-community-extensions.ts",
+    "validate:connector-worker": "npm run check --prefix examples/cloudflare-connector-worker",
+    "eval:agent": "node --experimental-strip-types scripts/evaluate-agent-fixtures.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "4.0.47",
+    "@ai-sdk/react": "4.0.82",
+    "@better-auth/drizzle-adapter": "1.7.1",
+    "@cloudflare/ai-chat": "0.10.2",
+    "agents": "0.21.0",
+    "ai": "7.0.79",
+    "better-auth": "1.7.1",
     "drizzle-orm": "0.45.2",
+    "lucide-react": "1.34.0",
     "next": "16.3.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "stripe": "22.5.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.53.1",

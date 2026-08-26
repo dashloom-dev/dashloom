@@ -1,0 +1,23 @@
+/* Readability floor for public pages and the product preview. */
+body { font-size:16px; }
+.site-nav,.nav-links,.nav-actions,.button { font-size:14px; }
+.eyebrow,.section-intro>span,.source-strip p { font-size:14px; }
+.hero-note,.pricing-note,footer { font-size:14px; line-height:1.55; }
+.zh-dashboard header small { font-size:14px; }
+.intelligence-grid b,.value-grid b { font-size:14px; }
+.intelligence-grid span,.intelligence-grid p,.intelligence-grid a,.value-grid p,.pricing-grid li { font-size:14px; }
+.pricing-grid article>span,.pricing-grid article>p,.price small,.zh-insights span,.zh-insights p { font-size:14px; }
+
+/* The landing-page dashboard is illustrative, but its contents must remain legible. */
+.window-bar,.dashboard-head p,.dashboard-actions button,.metric-card p,.agent-brief p,.agent-brief button,.card-heading p,.card-heading a { font-size:14px; }
+.app-sidebar>small,.agent-brief span,.legend,.chart-label,.chart-dates,.product-row-head { font-size:14px; }
+.agent-orb { font-size:14px; }
+.app-sidebar>a,.workspace-person strong,.workspace-person small,.product-row { font-size:14px; }
+.agent-brief strong,.card-heading h3 { font-size:15px; }
+.metric-card small { font-size:14px; }
+
+@media (max-width:520px) {
+  .eyebrow { font-size:14px; }
+  .dashboard-head h2 { font-size:20px; }
+  .metric-card strong { font-size:20px; }
+}

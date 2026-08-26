@@ -1,0 +1,11 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createAuth } from '@/lib/auth';
+import { listAgentComparisons, runAgentComparison } from '@/lib/agent-comparison';
+import { recordAuditEvent } from '@/lib/audit';
+import { getPrimaryWorkspace } from '@/lib/workspaces';
+
+const input = z.object({ question: z.string().trim().min(3).max(1000), preset: z.enum(['portfolio_analyst', 'revenue_analyst', 'seo_growth_analyst', 'operations_analyst', 'client_reporting_analyst']), providerIds: z.array(z.string().uuid()).min(2).max(4) });
+async function context(request: Request) { const session = await createAuth().api.getSession({ headers: request.headers }); if (!session) return null; const workspace = await getPrimaryWorkspace(session.user.id); return workspace ? { session, workspace } : null; }
+export async function GET(request: Request) { const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); return NextResponse.json({ comparisons: await listAgentComparisons(value.workspace.id) }); }
+export async function POST(request: Request) { const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); if (!['owner', 'admin'].includes(value.workspace.role)) return NextResponse.json({ error: 'Owner or admin access required' }, { status: 403 }); const parsed = input.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid comparison request' }, { status: 400 }); try { const outcome = await runAgentComparison({ workspaceId: value.workspace.id, createdByUserId: value.session.user.id, ...parsed.data }); await recordAuditEvent({ workspaceId: value.workspace.id, actorUserId: value.session.user.id, action: 'agent_comparison.completed', targetType: 'agent_comparison', targetId: outcome.comparisonId, metadata: { preset: parsed.data.preset, providerCount: outcome.providerCount, successes: outcome.successes, status: outcome.status } }); return NextResponse.json(outcome, { status: 201 }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Agent comparison failed' }, { status: 422 }); } }

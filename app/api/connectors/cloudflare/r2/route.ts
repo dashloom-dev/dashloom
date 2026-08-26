@@ -1,0 +1,21 @@
+import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { getDb } from '@/db';
+import { connectorAccounts, productConnectorMappings, products } from '@/db/schema';
+import { recordAuditEvent } from '@/lib/audit';
+import { createAuth } from '@/lib/auth';
+import { validateCloudflareCredentials } from '@/lib/cloudflare';
+import { validateR2Access } from '@/lib/cloudflare-r2';
+import { encryptSecret } from '@/lib/crypto';
+import { getPrimaryWorkspace } from '@/lib/workspaces';
+
+const input = z.object({ displayName: z.string().trim().min(2).max(80), accountId: z.string().trim().min(20).max(64), apiToken: z.string().trim().min(20).max(500), productId: z.string().uuid(), bucketName: z.string().trim().min(1).max(180).regex(/^[a-z0-9][a-z0-9._-]*[a-z0-9]$|^[a-z0-9]$/) });
+
+export async function POST(request: Request) {
+  const session = await createAuth().api.getSession({ headers: request.headers }); if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); const workspace = await getPrimaryWorkspace(session.user.id); if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 }); if (!['owner', 'admin'].includes(workspace.role)) return NextResponse.json({ error: 'Owner or admin access required' }, { status: 403 }); const parsed = input.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid R2 connection' }, { status: 400 }); const [product] = await getDb().select({ id: products.id }).from(products).where(and(eq(products.id, parsed.data.productId), eq(products.workspaceId, workspace.id))).limit(1); if (!product) return NextResponse.json({ error: 'Product not found in this workspace' }, { status: 404 });
+  const credentials = { accountId: parsed.data.accountId, apiToken: parsed.data.apiToken }; try { await validateCloudflareCredentials(credentials); await validateR2Access(credentials, parsed.data.bucketName); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Cloudflare R2 validation failed' }, { status: 422 }); }
+  const db = getDb(); const [existing] = await db.select().from(connectorAccounts).where(and(eq(connectorAccounts.workspaceId, workspace.id), eq(connectorAccounts.provider, 'cloudflare'), eq(connectorAccounts.externalAccountId, parsed.data.accountId))).limit(1); const connectorId = existing?.id || crypto.randomUUID(); const encryptedCredentials = await encryptSecret(JSON.stringify(credentials), `connector:${workspace.id}:${connectorId}`);
+  if (existing) await db.update(connectorAccounts).set({ displayName: parsed.data.displayName, encryptedCredentials, status: 'connected', lastCheckedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(and(eq(connectorAccounts.id, connectorId), eq(connectorAccounts.workspaceId, workspace.id))); else await db.insert(connectorAccounts).values({ id: connectorId, workspaceId: workspace.id, provider: 'cloudflare', externalAccountId: parsed.data.accountId, displayName: parsed.data.displayName, encryptedCredentials, status: 'connected', lastCheckedAt: new Date().toISOString() });
+  await db.delete(productConnectorMappings).where(and(eq(productConnectorMappings.workspaceId, workspace.id), eq(productConnectorMappings.productId, product.id), eq(productConnectorMappings.source, 'cloudflare_r2'))); await db.insert(productConnectorMappings).values({ id: crypto.randomUUID(), workspaceId: workspace.id, productId: product.id, connectorAccountId: connectorId, source: 'cloudflare_r2', resourceId: parsed.data.bucketName, resourceLabel: parsed.data.bucketName, configurationJson: JSON.stringify({ retentionDays: 31 }), enabled: true }); await recordAuditEvent({ workspaceId: workspace.id, actorUserId: session.user.id, action: 'connector.cloudflare_r2_connected', targetType: 'connector', targetId: connectorId, metadata: { productId: product.id, bucketName: parsed.data.bucketName, retentionDays: 31 } }); return NextResponse.json({ connector: { id: connectorId, accountId: parsed.data.accountId, status: 'connected' }, mapping: { productId: product.id, bucketName: parsed.data.bucketName } }, { status: 201 });
+}

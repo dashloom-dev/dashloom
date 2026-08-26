@@ -1,0 +1,44 @@
+{
+  "portfolio-prioritization": {
+    "summary": "Beta should be the first reliability priority; its error-rate signal outweighs Alpha's healthier position.",
+    "findings": [
+      { "title": "Beta is the first priority", "detail": "Beta's health and error evidence indicate the clearest current risk.", "action": "Inspect recent deploys and error logs before changing traffic or capacity.", "confidence": 0.88, "evidenceRefs": ["health:beta", "metric:beta:cloudflare:error_rate"] },
+      { "title": "Alpha remains healthier", "detail": "Alpha's deterministic health signal does not outrank Beta's reliability risk.", "action": "Keep monitoring Alpha while the Beta investigation is active.", "confidence": 0.75, "evidenceRefs": ["health:alpha"] }
+    ]
+  },
+  "revenue-multi-currency": {
+    "summary": "USD and EUR MRR must be reviewed as separate currency movements.",
+    "findings": [
+      { "title": "USD MRR movement", "detail": "The USD series changed within the measured period.", "action": "Review USD subscription changes and refunds.", "confidence": 0.82, "evidenceRefs": ["metric:alpha:stripe:mrr:usd", "metric:alpha:stripe:refunds:usd"] },
+      { "title": "EUR MRR movement", "detail": "The EUR series moved independently from USD.", "action": "Review EUR customer and plan events separately.", "confidence": 0.81, "evidenceRefs": ["metric:alpha:stripe:mrr:eur"] }
+    ]
+  },
+  "seo-visibility-without-clicks": {
+    "summary": "Visibility increased, but clicks and CTR show that search exposure is not converting into visits.",
+    "findings": [
+      { "title": "Impressions are not becoming clicks", "detail": "Impression visibility and click evidence have diverged.", "action": "Segment queries and pages to identify the largest CTR gaps.", "confidence": 0.86, "evidenceRefs": ["metric:alpha:search_console:impressions", "metric:alpha:search_console:clicks", "metric:alpha:search_console:ctr"] },
+      { "title": "Test search presentation", "detail": "The evidence supports inspecting query intent, not assuming an external cause.", "action": "Rewrite the title and snippet for one high-impression query and measure CTR.", "confidence": 0.7, "evidenceRefs": ["metric:alpha:search_console:ctr", "metric:alpha:search_console:position"] }
+    ]
+  },
+  "operations-regression": {
+    "summary": "Investigate the error-rate increase first and use CPU p99 as a correlated pressure signal, not a proven cause.",
+    "findings": [
+      { "title": "Error rate is the first regression", "detail": "The error signal is the clearest direct user-impact indicator.", "action": "Compare deploy timing with logs and prepare a reversible rollback if confirmed.", "confidence": 0.9, "evidenceRefs": ["metric:alpha:cloudflare:error_rate", "health:alpha"] },
+      { "title": "CPU p99 needs correlation", "detail": "CPU pressure moved, but the evidence does not prove causation.", "action": "Inspect CPU-heavy routes alongside request volume and error samples.", "confidence": 0.76, "evidenceRefs": ["metric:alpha:cloudflare:cpu_time_p99", "metric:alpha:cloudflare:requests"] }
+    ]
+  },
+  "agency-client-brief": {
+    "summary": "The client has a conversion win, a search-click risk, and a focused next action while competitor evidence remains observational.",
+    "findings": [
+      { "title": "Win: conversions improved", "detail": "The measured conversion signal is the clearest positive outcome.", "action": "Document the campaign and landing-page pattern associated with this period.", "confidence": 0.84, "evidenceRefs": ["metric:client:ga4:conversions"] },
+      { "title": "Risk: search clicks need attention", "detail": "Search clicks are the principal acquisition risk in the current evidence.", "action": "Review losing queries and pages before the next client update.", "confidence": 0.82, "evidenceRefs": ["metric:client:search_console:clicks"] },
+      { "title": "Next action: monitor the observed rival", "detail": "The competitor signal is directional evidence only.", "action": "Compare the rival's visible content topics with the client's query gaps.", "confidence": 0.66, "evidenceRefs": ["competitor:rival:manual:organic_traffic:2026-08-26"] }
+    ]
+  },
+  "cross-signal-hypothesis": {
+    "summary": "Revenue and sessions moved together, which supports an investigation hypothesis but does not prove causation.",
+    "findings": [
+      { "title": "Hypothesis: acquisition may contribute to the revenue decline", "detail": "The period shows revenue and sessions co-movement; this relationship is a prioritization signal, not causal proof.", "action": "Validate the hypothesis by segmenting sessions and USD revenue by channel and conversion path, then run a bounded acquisition experiment.", "confidence": 0.72, "evidenceRefs": ["relationship:alpha-revenue-sessions", "metric:alpha:stripe:revenue:usd", "metric:alpha:ga4:sessions"] }
+    ]
+  }
+}

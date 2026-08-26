@@ -1,0 +1,10 @@
+# Copy to .dev.vars for local Cloudflare development. Never commit .dev.vars.
+BETTER_AUTH_SECRET=replace-with-at-least-32-random-characters
+BETTER_AUTH_URL=http://localhost:3000
+CREDENTIALS_ENCRYPTION_KEY=replace-with-a-separate-random-secret-at-least-32-characters
+GOOGLE_OAUTH_CLIENT_ID=your-google-web-application-client-id
+GOOGLE_OAUTH_CLIENT_SECRET=your-google-web-application-client-secret
+REPORT_CRON_SECRET=replace-with-an-independent-random-secret-at-least-32-characters
+AUTH_EMAIL_WEBHOOK_URL=https://your-transactional-email-relay.example/send
+AUTH_EMAIL_WEBHOOK_SECRET=replace-with-your-email-relay-authentication-secret
+AUTH_REQUIRE_EMAIL_VERIFICATION=false

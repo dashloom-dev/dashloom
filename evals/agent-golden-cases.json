@@ -1,0 +1,127 @@
+[
+  {
+    "id": "portfolio-prioritization",
+    "preset": "portfolio_analyst",
+    "question": "Which product needs attention first, and why?",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:alpha:stripe:revenue:usd", "currency": "usd" },
+        { "evidenceId": "metric:beta:cloudflare:error_rate" }
+      ],
+      "competitors": [],
+      "healthScores": [{ "evidenceId": "health:alpha" }, { "evidenceId": "health:beta" }]
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["health:alpha", "health:beta"], ["metric:beta:cloudflare:error_rate"]],
+      "requiredKeywordGroups": [["priority", "first"], ["error", "reliability"]],
+      "forbiddenPhrases": ["definitely caused by"],
+      "minimumFindings": 2,
+      "minimumConfidence": 0.5
+    }
+  },
+  {
+    "id": "revenue-multi-currency",
+    "preset": "revenue_analyst",
+    "question": "Explain MRR movement without mixing currencies.",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:alpha:stripe:mrr:usd", "currency": "usd" },
+        { "evidenceId": "metric:alpha:stripe:mrr:eur", "currency": "eur" },
+        { "evidenceId": "metric:alpha:stripe:refunds:usd", "currency": "usd" }
+      ],
+      "competitors": [],
+      "healthScores": []
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["metric:alpha:stripe:mrr:usd"], ["metric:alpha:stripe:mrr:eur"]],
+      "requiredKeywordGroups": [["USD"], ["EUR"], ["separate", "currency"]],
+      "forbiddenPhrases": ["total mrr", "combined mrr"],
+      "minimumFindings": 2,
+      "minimumConfidence": 0.5
+    }
+  },
+  {
+    "id": "seo-visibility-without-clicks",
+    "preset": "seo_growth_analyst",
+    "question": "Why is higher visibility not producing more organic visits?",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:alpha:search_console:impressions" },
+        { "evidenceId": "metric:alpha:search_console:clicks" },
+        { "evidenceId": "metric:alpha:search_console:ctr" },
+        { "evidenceId": "metric:alpha:search_console:position" }
+      ],
+      "competitors": [],
+      "healthScores": []
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["metric:alpha:search_console:impressions"], ["metric:alpha:search_console:clicks", "metric:alpha:search_console:ctr"]],
+      "requiredKeywordGroups": [["impression", "visibility"], ["click", "CTR"], ["title", "snippet", "query"]],
+      "forbiddenPhrases": ["google penalty", "algorithm update caused"],
+      "minimumFindings": 2,
+      "minimumConfidence": 0.5
+    }
+  },
+  {
+    "id": "operations-regression",
+    "preset": "operations_analyst",
+    "question": "What operational regression should we investigate first?",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:alpha:cloudflare:error_rate" },
+        { "evidenceId": "metric:alpha:cloudflare:cpu_time_p99" },
+        { "evidenceId": "metric:alpha:cloudflare:requests" }
+      ],
+      "competitors": [],
+      "healthScores": [{ "evidenceId": "health:alpha" }]
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["metric:alpha:cloudflare:error_rate"], ["metric:alpha:cloudflare:cpu_time_p99"]],
+      "requiredKeywordGroups": [["error"], ["CPU", "latency"], ["rollback", "deploy", "log"]],
+      "forbiddenPhrases": ["database is definitely", "automatic rollback completed"],
+      "minimumFindings": 2,
+      "minimumConfidence": 0.5
+    }
+  },
+  {
+    "id": "agency-client-brief",
+    "preset": "client_reporting_analyst",
+    "question": "Give the client a clear win, risk, and next action.",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:client:ga4:conversions" },
+        { "evidenceId": "metric:client:search_console:clicks" }
+      ],
+      "competitors": [{ "evidenceId": "competitor:rival:manual:organic_traffic:2026-08-26" }],
+      "healthScores": []
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["metric:client:ga4:conversions"], ["metric:client:search_console:clicks"], ["competitor:rival:manual:organic_traffic:2026-08-26"]],
+      "requiredKeywordGroups": [["win"], ["risk"], ["next", "action"]],
+      "forbiddenPhrases": ["guaranteed growth", "competitor revenue"],
+      "minimumFindings": 3,
+      "minimumConfidence": 0.5
+    }
+  },
+  {
+    "id": "cross-signal-hypothesis",
+    "preset": "portfolio_analyst",
+    "question": "Revenue and acquisition both fell. What should we investigate without claiming causation?",
+    "evidence": {
+      "series": [
+        { "evidenceId": "metric:alpha:stripe:revenue:usd", "currency": "usd" },
+        { "evidenceId": "metric:alpha:ga4:sessions" }
+      ],
+      "competitors": [],
+      "crossSignals": [{ "evidenceId": "relationship:alpha-revenue-sessions" }],
+      "healthScores": []
+    },
+    "rubric": {
+      "requiredEvidenceGroups": [["relationship:alpha-revenue-sessions"], ["metric:alpha:stripe:revenue:usd"], ["metric:alpha:ga4:sessions"]],
+      "requiredKeywordGroups": [["hypothesis"], ["co-movement", "moved together"], ["validate", "investigate", "experiment"]],
+      "forbiddenPhrases": ["sessions caused revenue", "revenue fell because sessions", "proved the cause"],
+      "minimumFindings": 1,
+      "minimumConfidence": 0.5
+    }
+  }
+]

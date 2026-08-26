@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "submissionSlug": "example-skill",
+  "reviewerGithub": "independent-reviewer",
+  "pullRequest": 123,
+  "reviewedCommit": "0123456789abcdef0123456789abcdef01234567",
+  "reviewedAt": "2026-08-26",
+  "policyVersion": 1,
+  "checks": { "identity": true, "source": true, "license": true, "permissions": true, "policy": true, "tests": true },
+  "notes": "Reviewed the exact source commit, manifest behavior, permission claims, policy output, and contract tests."
+}

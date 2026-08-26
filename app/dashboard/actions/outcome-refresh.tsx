@@ -1,0 +1,16 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+export function OutcomeRefresh({ enabled }: { enabled: boolean }) {
+  const router = useRouter(); const [pending, setPending] = useState(false); const [message, setMessage] = useState('');
+  async function refresh() {
+    setPending(true); setMessage('');
+    const response = await fetch('/api/agent-actions/outcomes', { method: 'POST' });
+    const result = await response.json() as { error?: string; measured?: number; awaiting?: number; repaired?: number };
+    setPending(false); setMessage(result.error || `${result.measured || 0} refreshed · ${result.repaired || 0} repaired · ${result.awaiting || 0} awaiting newer evidence`);
+    if (response.ok) router.refresh();
+  }
+  return <div className="outcome-refresh"><button className="app-secondary" type="button" disabled={!enabled || pending} onClick={refresh}>{pending ? 'Measuring…' : 'Refresh outcomes'}</button>{message && <small role="status">{message}</small>}</div>;
+}

@@ -1,0 +1,13 @@
+import { and, desc, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { getDb } from '@/db';
+import { agentConversations } from '@/db/schema';
+import { createAuth } from '@/lib/auth';
+import { getPrimaryWorkspace } from '@/lib/workspaces';
+import { recordAuditEvent } from '@/lib/audit';
+
+const update = z.object({ id: z.string().uuid(), title: z.string().trim().min(1).max(80).optional(), status: z.enum(['active', 'archived']).optional() }).refine((value) => value.title !== undefined || value.status !== undefined, 'A title or status is required');
+async function context(request: Request) { const session = await createAuth().api.getSession({ headers: request.headers }); if (!session) return null; const workspace = await getPrimaryWorkspace(session.user.id); return workspace ? { session, workspace } : null; }
+export async function GET(request: Request) { const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); const rows = await getDb().select().from(agentConversations).where(eq(agentConversations.workspaceId, value.workspace.id)).orderBy(desc(agentConversations.lastMessageAt)).limit(100); return NextResponse.json({ conversations: rows }); }
+export async function PATCH(request: Request) { const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); if (!['owner', 'admin', 'member'].includes(value.workspace.role)) return NextResponse.json({ error: 'Member access required' }, { status: 403 }); const parsed = update.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid conversation update' }, { status: 400 }); const changed = await getDb().update(agentConversations).set({ ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}), ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}), updatedAt: new Date().toISOString() }).where(and(eq(agentConversations.id, parsed.data.id), eq(agentConversations.workspaceId, value.workspace.id))).returning({ id: agentConversations.id }); if (!changed.length) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 }); await recordAuditEvent({ workspaceId: value.workspace.id, actorUserId: value.session.user.id, action: 'agent_conversation.updated', targetType: 'agent_conversation', targetId: parsed.data.id, metadata: { titleChanged: parsed.data.title !== undefined, status: parsed.data.status } }); return NextResponse.json({ updated: true }); }

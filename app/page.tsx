@@ -12,7 +12,7 @@ const products = [
   ['Signal CRM', 'CRM', '11,903', '$14.2K', '932K'],
 ];
 
-const sources = ['Cloudflare Workers', 'Google Analytics 4', 'Search Console', 'D1 metrics'];
+const sources = ['Cloudflare Workers', 'Google Analytics 4', 'Search Console', 'Stripe revenue', 'D1 metrics'];
 
 const intelligenceViews = [
   ['Indie Hacker', 'Portfolio Analyst', 'Products, traffic, revenue, and operations'],
@@ -38,7 +38,7 @@ export default function Home() {
         <div className="nav-actions">
           <a className="text-link" href="/zh" lang="zh-CN">中文</a>
           <a className="text-link" href="https://github.com/dashloom-dev/dashloom">GitHub</a>
-          <a className="button button-small" href="#preview">View demo</a>
+          <a className="button button-small" href="/login">Open Dashloom</a>
         </div>
       </nav>
 
@@ -50,7 +50,7 @@ export default function Home() {
         <p className="hero-copy">Connect operations, acquisition, search, revenue, and competitor data. Dashloom&apos;s specialized agents explain what changed, why it matters, and what to do next.</p>
         <div className="hero-actions">
           <a className="button" href="https://github.com/dashloom-dev/dashloom">Start self-hosting <span>↗</span></a>
-          <a className="button button-secondary" href="#preview">Explore the dashboard <span>↓</span></a>
+          <a className="button button-secondary" href="/login">Open the product <span>→</span></a>
         </div>
         <p className="hero-note">Built for indie hackers and small teams running multiple products.</p>
       </section>
@@ -118,16 +118,16 @@ export default function Home() {
         <div className="value-grid">
           <article><b>01</b><h3>Ask with evidence</h3><p>Every important answer links back to products, metrics, periods, sources, and data freshness—not a confident guess.</p></article>
           <article><b>02</b><h3>Wake up to the brief</h3><p>Agents monitor changes and prepare daily, weekly, and monthly reports for email, Slack, Discord, or webhooks.</p></article>
-          <article><b>03</b><h3>Choose how AI runs</h3><p>Self-host with your own OpenAI-compatible API, or use managed AI allowances and reliable delivery in Dashloom Cloud.</p></article>
+          <article><b>03</b><h3>Choose and compare models</h3><p>Connect your own OpenAI-compatible APIs and compare 2–4 models on identical evidence inside your deployment.</p></article>
         </div>
       </section>
 
       <section className="open-section" id="open-source">
         <div><span className="eyebrow"><span />Open intelligence layer</span><h2>Bring your data.<br />Bring your model.</h2></div>
-        <div className="open-copy"><p>Community users can deploy Dashloom and connect an OpenAI-compatible API endpoint, key, and model. Dashloom Cloud adds managed AI allowances, scheduled analysis, delivery, and operational reliability.</p><a className="button" href="https://github.com/dashloom-dev/dashloom">View on GitHub <span>↗</span></a></div>
+        <div className="open-copy"><p>Deploy Dashloom Community on your own infrastructure and connect an OpenAI-compatible API endpoint, key, and model. Data, schedules, and reports remain under your control.</p><a className="button" href="https://github.com/dashloom-dev/dashloom">View on GitHub <span>↗</span></a></div>
       </section>
 
-      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></a><p>Turn every product signal into your next move.</p><span>© 2026 Dashloom</span></footer>
+      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></a><p>Turn every product signal into your next move.</p><span className="footer-links"><a href="/docs">Docs</a><a href="/status">Deployment status</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/dashloom-dev/dashloom/security">Security</a><i>© 2026 Dashloom</i></span></footer>
     </main>
   );
 }
