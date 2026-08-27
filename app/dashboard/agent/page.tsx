@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { agentComparisonRuns, agentConversations, agentExecutiveBriefs, agentGrowthMissions, agentProfiles, aiProviderAccounts, analysisRuns, productGoals, products } from '@/db/schema';
 import { requireServerSession } from '@/lib/session';
+import { getDeploymentLocale } from '@/lib/deployment-locale';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { agentDefinitions, type AgentPreset } from '@/lib/agent-catalog';
 import { getWorkspaceAgentReadiness, getWorkspaceAgentReadinessByProduct } from '@/lib/agent-readiness';
@@ -73,7 +74,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
     try { return [{ run, result: JSON.parse(run.findingsJson!) as { summary: string; findings: Array<{ title: string; detail: string; severity: string; action: string; confidence: number; evidenceRefs: string[] }> } }]; } catch { return []; }
   });
 
-  const zh = workspace?.locale === 'zh';
+  const zh = getDeploymentLocale() === 'zh';
   const analysis = <div className="tab-section-stack">{!modelReady && canManage && <section className="app-panel agent-provider-onboarding"><div className="panel-title"><div><span>{zh ? '距离第一份简报只差一步' : 'ONE STEP TO YOUR FIRST BRIEF'}</span><h2>{zh ? '连接你的 OpenAI 兼容模型' : 'Connect your own OpenAI-compatible model'}</h2></div><span className="status-pill">BYOK · {zh ? '已加密' : 'encrypted'}</span></div><p>{zh ? '只有在你主动运行分析时，Dashloom 才会向所配置的模型服务发送有界证据快照和问题。' : 'Your recent product evidence stays in this workspace until you deliberately run an analysis.'}</p><ProviderForm embedded returnTo={`/dashboard/agent?preset=${selectedPreset}`} /></section>}<section className="agent-catalog">{agentPresets.map((preset) => { const item = agentDefinitions[preset]; const status = readiness?.[preset]; return <Link href={`/dashboard/agent?preset=${preset}`} key={preset} data-active={selectedPreset === preset} data-ready={status?.ready}><span>{item.name}</span><p>{item.focus}</p><b>{status?.ready ? `${status.eligiblePointCount + status.competitorPointCount} ${zh ? '个近期数据点' : 'recent points'}` : zh ? '需要匹配的数据' : 'Needs matching data'}</b></Link>; })}</section><section className="agent-workbench">
       <div className="agent-chat">
         <div className="agent-message"><strong>{selectedConversation ? selectedConversation.title : ready ? `${agentDefinitions[selectedPreset].name} ${zh ? '已准备好' : 'is ready'}` : zh ? 'Agent 设置需要处理' : 'Agent setup needs attention'}</strong><p>{ready ? (zh ? '提出一个决策问题。调用模型前，Dashloom 会冻结匹配证据。' : 'Ask a decision question. Dashloom freezes matching evidence before calling your model.') : setupMessage}</p><div className="agent-evidence"><span>{selectedScopeLabel} {zh ? '范围' : 'scope'}</span><span>{productRows.length} {zh ? '个可用产品' : 'products available'}</span><span>{selectedReadiness?.eligiblePointCount || 0} {zh ? '个匹配指标点 · 14 天' : 'matching metric points · 14d'}</span><span>{selectedReadiness?.competitorPointCount || 0} {zh ? '个竞品数据点' : 'competitor points'}</span><span>{goalCount[0]?.value || 0} {zh ? '个经营目标' : 'operating goals'}</span><span>{modelReady ? (zh ? '模型已就绪' : 'Model ready') : (zh ? '需要模型' : 'Model required')}</span></div></div>
