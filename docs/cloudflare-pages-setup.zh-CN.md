@@ -1,5 +1,7 @@
 # 连接 Cloudflare Pages 部署健康
 
+> 兼容性说明：当前 Community 控制台不再把部署平台作为新的业务数据源。代码仍保留已有自托管映射和 API 路由以兼容旧部署。
+
 Dashloom 会把 Cloudflare Pages 部署结果接入 Operations Agent 和 Portfolio Agent 的证据。系统只保存部署时间、production/preview 环境、是否跳过、最终阶段结果和派生耗时；不会持久化环境变量、构建配置、Commit Hash 或 Message、分支、仓库身份、部署 URL、Alias、源码、构建日志或部署内容。
 
 ## 创建最小权限

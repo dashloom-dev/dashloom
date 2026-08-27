@@ -1,5 +1,7 @@
 # Connect GitHub repository activity
 
+> Compatibility reference: the current Community dashboard does not offer code-hosting activity as a new business data source. Existing self-hosted mappings and API routes remain available for compatibility.
+
 Dashloom connects repository delivery evidence to the same product that already contains traffic, revenue, SEO, and operations metrics. It reads summary metadata, recent commits, and published releases; it does not store source code, commit messages, file contents, or author identity.
 
 ## Create a fine-grained token

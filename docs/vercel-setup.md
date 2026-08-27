@@ -1,5 +1,7 @@
 # Connect Vercel deployment health
 
+> Compatibility reference: Vercel is now documented as a deployment target, not a business data source in the current Community dashboard. Existing self-hosted mappings and API routes remain available for compatibility.
+
 Dashloom connects recent Vercel deployment outcomes to a product so the Operations and Portfolio Agents can compare delivery activity with traffic, revenue, and runtime evidence. It reads project metadata and deployment summaries only; it does not read environment variables, source files, build logs, or deployment file contents.
 
 ## Create access

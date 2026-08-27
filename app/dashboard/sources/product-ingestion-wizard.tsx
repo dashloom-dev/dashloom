@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState, useSyncExternalStore } from 'react';
+import Link from 'next/link';
 
 type Product = { id: string; name: string };
 type Status = {
@@ -50,7 +51,7 @@ export function ProductIngestionWizard({ products, canManage }: { products: Prod
     catch { setMessage(`Could not copy ${label.toLowerCase()}; select it manually.`); }
   }
 
-  if (!products.length) return <section className="app-panel ingestion-wizard"><div className="panel-empty"><p>Add a real product first. Dashloom will not create demo products or mix sample metrics into your workspace.</p><a href="/dashboard/products">Add product →</a></div></section>;
+  if (!products.length) return <section className="app-panel ingestion-wizard"><div className="panel-empty"><p>Add a real product first. Dashloom will not create demo products or mix sample metrics into your workspace.</p><Link href="/dashboard/products">Add product →</Link></div></section>;
   const readyAgents = status ? Object.values(status.agentReadiness).filter((item) => item.ready).length : 0;
   return <section className="app-panel ingestion-wizard">
     <div className="panel-title"><div><span>DIRECT PRODUCT INGESTION</span><h2>Connect a real product in three steps</h2></div><span className="status-pill">write only · product scoped</span></div>

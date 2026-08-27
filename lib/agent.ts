@@ -1,8 +1,9 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '@/db';
+import { jsonText } from '@/db/dialect';
 import { agentConversations, agentGrowthMissions, agentProfiles, agentSkillManifests, aiProviderAccounts, aiUsageEvents, analysisRuns, competitorMetricPoints, competitors, metricPoints, productGoals, products } from '@/db/schema';
 import { decryptSecret } from './crypto';
 import { validateAgentCitations } from './agent-validation';
@@ -56,8 +57,8 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
   if (scope.mode === 'product' && !scope.productId) throw new Error('The product used by this Agent conversation is no longer available.');
   const productRows = await getDb().select({ id: products.id, name: products.name, domain: products.domain }).from(products).where(and(eq(products.workspaceId, workspaceId), scope.productId ? eq(products.id, scope.productId) : undefined));
   if (scope.productId && !productRows.length) throw new Error('The selected product was not found in this workspace.');
-  const metricPolicy = allowed.length ? domains.length ? or(inArray(metricPoints.metric, [...allowed]), and(eq(metricPoints.source, 'custom'), inArray(sql<string>`case when json_valid(${metricPoints.dimensionsJson}) then json_extract(${metricPoints.dimensionsJson}, '$.domain') else null end`, domains))) : inArray(metricPoints.metric, [...allowed]) : undefined;
-  const competitorPolicy = allowed.length ? domains.length ? or(inArray(competitorMetricPoints.metric, [...allowed]), and(eq(competitorMetricPoints.source, 'custom'), inArray(sql<string>`case when json_valid(${competitorMetricPoints.dimensionsJson}) then json_extract(${competitorMetricPoints.dimensionsJson}, '$.domain') else null end`, domains))) : inArray(competitorMetricPoints.metric, [...allowed]) : undefined;
+  const metricPolicy = allowed.length ? domains.length ? or(inArray(metricPoints.metric, [...allowed]), and(eq(metricPoints.source, 'custom'), inArray(jsonText(metricPoints.dimensionsJson, 'domain'), domains))) : inArray(metricPoints.metric, [...allowed]) : undefined;
+  const competitorPolicy = allowed.length ? domains.length ? or(inArray(competitorMetricPoints.metric, [...allowed]), and(eq(competitorMetricPoints.source, 'custom'), inArray(jsonText(competitorMetricPoints.dimensionsJson, 'domain'), domains))) : inArray(competitorMetricPoints.metric, [...allowed]) : undefined;
   const metricRows = await getDb().select().from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, start), lte(metricPoints.metricDate, currentEnd), metricPolicy)).orderBy(desc(metricPoints.metricDate)).limit(metricLimit + 1);
   const rows = metricRows.slice(0, metricLimit);
   const allGoalDefinitions = await getDb().select().from(productGoals).where(and(eq(productGoals.workspaceId, workspaceId), scope.productId ? eq(productGoals.productId, scope.productId) : undefined, eq(productGoals.enabled, true)));

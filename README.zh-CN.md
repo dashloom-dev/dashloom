@@ -2,9 +2,9 @@
 
 简体中文 · [English](README.md)
 
-Dashloom Community 是一套自托管的 AI 产品情报系统，帮助团队把产品分析、收入、获客、基础设施和交付系统中的信号汇总到同一层可验证证据中。
+Dashloom Community 是一套自托管的 AI 产品情报系统，帮助团队把产品分析、收入、获客、搜索和业务运营信号汇总到同一层可验证证据中。
 
-Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent 使用你自己的 OpenAI 兼容模型分析这些证据。应用、D1 数据库、Provider 凭证、定时任务和报告都运行在你控制的基础设施中。
+Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent 使用你自己的 OpenAI 兼容模型分析这些证据。应用、D1 或 Supabase PostgreSQL 数据库、Provider 凭证、定时任务和报告都运行在你控制的基础设施中。
 
 ![使用虚构数据的 Dashloom Community 总览](docs/images/readme/overview-zh.png)
 
@@ -16,9 +16,12 @@ Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent �
 - 独立开发者、SaaS 收入、SEO 增长、Cloudflare 运维和客户报告五类智能视图。
 - BYOK Agent 对话、Executive Brief、模型对比、任务历史和证据引用。
 - 使用确定性周期比较发现变化的信号雷达；关联信号不会被表述为因果关系。
-- Cloudflare、Google Analytics/Search Console、Bing Webmaster、Stripe 收入、Lemon Squeezy、Creem、Polar、Paddle、Supabase、GitHub、Vercel、D1 和 Custom REST 连接器。
+- Google Analytics/Search Console、Bing Webmaster、Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle 和 Custom REST 连接器。
 - 手动导入、开放摄取 API Key、计算指标、定时同步和本地报告。
+- 中英文控制台导航、工作空间级语言偏好，以及按任务分组的标签页工作流。
 - Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移证据导出。
+
+Cloudflare Workers、Vercel、AWS、作为应用存储的 D1 和 Supabase PostgreSQL 都是部署或存储选项，不是业务数据源。控制台数据源目录只展示产品、获客、搜索、收入或明确导入的业务证据。
 
 Dashloom Community 是独立的开源产品，与私有 Dashloom Cloud 仓库不存在源码、Package、运行时、数据库、部署、Git 或构建依赖。
 
@@ -36,6 +39,10 @@ Dashloom 先在相同产品、来源、指标、币种和维度内进行确定�
 
 ![使用虚构数据的 Dashloom 产品组合](docs/images/readme/products-zh.png)
 
+### 双语、聚焦任务的工作空间
+
+可以从控制台账号菜单或**设置 → 工作空间**选择 English 或简体中文。语言偏好保存在工作空间中，并应用到导航和核心产品页面。产品、数据源、Agent 分析与设置使用标签页组织长流程，但不会改变授权或数据边界。
+
 ## 架构
 
 ```text
@@ -44,7 +51,7 @@ Dashloom 先在相同产品、来源、指标、币种和维度内进行确定�
    ▼
 认证服务端路由 ──► 工作区与产品权限校验
    │
-   ├──► Provider 适配器 ──► D1 标准化证据
+   ├──► Provider 适配器 ──► D1 或 Supabase PostgreSQL 标准化证据
    ├──► 确定性指标、目标、健康度和信号雷达
    └──► BYOK Agent 编排 ──► 带证据引用的发现与行动
 ```
@@ -54,15 +61,15 @@ Dashloom 先在相同产品、来源、指标、币种和维度内进行确定�
 - Provider 和模型凭证在服务端加密，且不会进入可迁移导出。
 - 浏览器不会授予工作区访问权限、解密凭证或提供可信证据。
 
-完整边界和数据所有权说明见[架构文档](docs/architecture.md)。
+完整边界和数据所有权说明见[架构文档](docs/architecture.zh-CN.md)。
 
 ## 环境要求
 
 - Node.js 22.13 或更高版本
 - npm 10 或更高版本
-- 生产部署需要 Cloudflare 账号
+- Workers/D1 部署需要 Cloudflare 账号；PostgreSQL 路径需要 Node.js 托管平台和 Supabase
 
-> **数据库边界：** Community v0.1 使用全新的 Community 专属 D1 基线。请创建新的 D1 数据库，不要让本仓库连接已有的 Dashloom Cloud 或预发布 Dashloom 数据库。
+> **数据库边界：** Community 使用独立的 Community 专属 Schema。请创建新的 D1 数据库或 Supabase 项目，不要让本仓库连接已有的 Dashloom Cloud 或预发布 Dashloom 数据库。
 - Wrangler 4.x，已包含在本仓库开发依赖中
 - 运行 Agent 时需要 OpenAI 兼容 Provider Key
 
@@ -138,7 +145,7 @@ npm run dev
 
 进入**数据源**，选择一种方式：
 
-- 使用最小权限凭证连接受支持的 Provider；
+- 使用最小权限凭证连接 Google Analytics/Search Console、Bing Webmaster 或受支持的收入 Provider；
 - 配置只读的 D1 聚合查询；
 - 手动导入标准化指标；
 - 为 TypeScript SDK 或 Connector Worker 创建限定范围的摄取 Key；
@@ -148,7 +155,7 @@ npm run dev
 
 ### 第三步：连接模型
 
-进入**设置**，添加 OpenAI 兼容的 BYOK Provider 并选择模型。模型凭证写入 D1 前会使用 `CREDENTIALS_ENCRYPTION_KEY` 加密。
+进入**设置**，添加 OpenAI 兼容的 BYOK Provider 并选择模型。模型凭证写入所选应用数据库前会使用 `CREDENTIALS_ENCRYPTION_KEY` 加密。
 
 Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订阅。
 
@@ -168,7 +175,7 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 - 把有效发现加入 **Agent 行动**并衡量结果。
 - 把可重复的改进工作升级为**增长任务**。
 - 创建本地报告和数据同步计划。
-- 保持 Worker Cron 启用，让到期计划和行动结果得到处理。
+- 在 Cloudflare 上保持 Worker Cron 启用；使用 Node.js 托管平台时，由平台调度器调用受保护的维护与报告接口。
 
 ## 环境变量参考
 
@@ -184,6 +191,13 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 | `AUTH_EMAIL_WEBHOOK_SECRET` | 使用邮件时 | 发送给邮件中继的认证 Secret。 |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | 可选 | 生产邮件配置完成后设为 `true`。 |
 | `NEXT_PUBLIC_APP_URL` | 可选 | 公开且非 Secret 的 Origin 覆盖，配置在 `.env`。 |
+| `DASHLOOM_DATABASE` | Node.js 部署 | 在构建和运行时选择 `d1` 或 `supabase`。 |
+| `CLOUDFLARE_ACCOUNT_ID` | Node.js + D1 | 应用 D1 数据库所属的 Cloudflare Account。 |
+| `CLOUDFLARE_D1_DATABASE_ID` | Node.js + D1 | 目标应用 D1 数据库的 UUID。 |
+| `CLOUDFLARE_D1_API_TOKEN` | Node.js + D1 | 参数化 Remote D1 适配器使用的专用服务端 Token。 |
+| `SUPABASE_DATABASE_URL` | Supabase 存储 | 仅服务端使用的 PostgreSQL 直连或 Transaction Pooler 地址。 |
+| `SUPABASE_DATABASE_POOL_SIZE` | 可选 | 每个实例的 PostgreSQL 连接上限，范围 1–20，默认 5。 |
+| `SUPABASE_DATABASE_SSL` | 可选 | 默认保持 TLS；仅可信本地或自托管 PostgreSQL 环境可设为 `disable`。 |
 
 连接器和模型 Key 通过认证后的产品表单录入。不要把它们写入公开环境变量或提交到仓库。
 
@@ -211,13 +225,21 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 
 仓库中存在 migration 文件不代表生产迁移已经完成。只有目标远程 D1 已应用迁移、没有待执行迁移并完成 Schema 核验后，生产数据库变更才算完成。
 
+## 部署到 Vercel 或 AWS
+
+Node.js 运行时支持两套完整存储路径：通过 Cloudflare 鉴权 HTTP API 使用 Remote D1，或通过连接池适配器使用 Supabase PostgreSQL。Supabase 路径以同一套 38 表应用模型保存认证、工作空间配置、标准化证据、Agent 状态、报告、计划和审计历史。
+
+后端选择、构建命令、调度器接入、连接池、Migration 与核验方式见 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)。构建成功不代表远程数据库已经完成迁移。
+
 ## 完整验证
 
 ```bash
 npm run typecheck
+npm run typecheck:supabase
 npm run lint
 npm test
 npm run build
+npm run build:supabase
 npm run validate:extensions
 npm run validate:connector-worker
 npm run eval:agent
@@ -230,11 +252,15 @@ npm run eval:agent
 - **无法保存 Provider 凭证：**配置至少 32 字符且独立的 `CREDENTIALS_ENCRYPTION_KEY`。
 - **Agent 未就绪：**连接 BYOK 模型，并确认当前产品有与该专家匹配的近期指标。
 - **信号雷达为空：**至少采集两个可比较周期；未超过阈值时 Dashloom 不会伪造信号。
-- **定时任务没有运行：**确认 Worker Cron 已部署，并查看应用中的自动化和同步状态。
+- **Node.js 上的 Remote D1 不可用：**确认 Account ID、数据库 UUID 和专用 API Token 属于同一个目标数据库。
+- **Supabase 无法连接：**确保连接 URL 只存在于服务端；Serverless 平台优先使用 Transaction Pooler，并核对每实例连接池上限。
+- **定时任务没有运行：**确认 Worker Cron 已部署，或配置 Node.js 平台调度器调用受保护的维护与报告接口。
 
 ## 延伸文档
 
-- [架构与安全边界](docs/architecture.md)
+- [架构与安全边界](docs/architecture.zh-CN.md)
+- [Vercel 和 AWS 部署](docs/deployment-next.zh-CN.md)
+- [备份与恢复](docs/backup-and-recovery.zh-CN.md)
 - [首次价值路径](docs/first-value-path.zh-CN.md)
 - [连接器账号生命周期](docs/connector-account-lifecycle.zh-CN.md)
 - [Bing Webmaster 接入](docs/bing-webmaster-setup.zh-CN.md)

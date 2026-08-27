@@ -8,11 +8,13 @@ import { addRollupValue, finishRollup, type RollupAccumulator } from '@/lib/metr
 import { calculateProductHealth } from '@/lib/product-health';
 import { buildActivationProgress, buildFirstValueGuide } from '@/lib/activation-progress';
 import { evaluateProductGoals } from '@/lib/product-goals';
+import Link from 'next/link';
 
 export default async function DashboardOverview() {
   const { user } = await requireServerSession();
   const workspace = await getPrimaryWorkspace(user.id);
   if (!workspace) return <div className="empty-state"><h1>Workspace setup needs attention</h1><p>Your account exists, but no workspace membership was found.</p></div>;
+  const zh = workspace.locale === 'zh';
 
   const db = getDb();
   const [productRows, metricRows, recentSyncs, healthPoints, healthDates, latestAnalysisRows, openActions, sourceMappings, connectedProviders, actedOnFindings, enabledSchedules, activeGoalRows, goalMetricRows] = await Promise.all([
@@ -46,23 +48,23 @@ export default async function DashboardOverview() {
   const firstValue = buildFirstValueGuide({ productCount: productRows.length, sourceReady: sourceMappings.length > 0, recentEvidenceCount: healthPoints.length, modelReady: connectedProviders.length > 0, successfulAnalysisCount: latestAnalysisRows.length });
 
   return <div className="app-page">
-    <header className="app-page-head"><div><span>WORKSPACE OVERVIEW</span><h1>Good morning, {user.name.split(' ')[0]}.</h1><p>{empty ? 'Add your first product to begin connecting real data.' : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`}</p></div><LinkButton /></header>
+    <header className="app-page-head"><div><span>{zh ? '工作空间总览' : 'WORKSPACE OVERVIEW'}</span><h1>{zh ? `你好，${user.name.split(' ')[0]}。` : `Good morning, ${user.name.split(' ')[0]}.`}</h1><p>{empty ? (zh ? '添加第一个产品，开始连接真实数据。' : 'Add your first product to begin connecting real data.') : (zh ? `正在监控工作空间中的 ${productRows.length} 个活跃产品。` : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`)}</p></div><LinkButton zh={zh} /></header>
     {!firstValue.complete && <section className="first-value-guide">
-      <header><div><span>GET STARTED</span><h2>Reach your first evidence-backed answer</h2><p>Three steps turn a new workspace into a useful product brief. Progress comes from real workspace data, so there is nothing artificial to dismiss or skip.</p></div><b>{firstValue.completed}/{firstValue.total}</b></header>
-      <div className="first-value-steps">{firstValue.steps.map((step, index) => <article key={step.id} data-state={step.state}><i>{step.complete ? <Check size={17} /> : index + 1}</i><div><span>{step.state === 'current' ? 'DO THIS NEXT' : step.complete ? 'COMPLETE' : 'COMING UP'}</span><h3>{step.title}</h3><p>{step.description}</p>{step.state === 'current' && <a className="app-primary" href={step.href}>{step.action} →</a>}</div></article>)}</div>
+      <header><div><span>{zh ? '快速开始' : 'GET STARTED'}</span><h2>{zh ? '获得第一个基于证据的答案' : 'Reach your first evidence-backed answer'}</h2><p>{zh ? '三个步骤把新工作空间变成可用的产品简报，所有进度都来自真实数据。' : 'Three steps turn a new workspace into a useful product brief.'}</p></div><b>{firstValue.completed}/{firstValue.total}</b></header>
+      <div className="first-value-steps">{firstValue.steps.map((step, index) => <article key={step.id} data-state={step.state}><i>{step.complete ? <Check size={17} /> : index + 1}</i><div><span>{step.state === 'current' ? (zh ? '下一步' : 'DO THIS NEXT') : step.complete ? (zh ? '已完成' : 'COMPLETE') : (zh ? '稍后进行' : 'COMING UP')}</span><h3>{step.title}</h3><p>{step.description}</p>{step.state === 'current' && <Link className="app-primary" href={step.href}>{step.action} →</Link>}</div></article>)}</div>
     </section>}
     <section className="real-metric-grid">
-      <Metric icon={<Activity />} label="Products" value={String(productRows.length)} note="Active in this workspace" />
-      <Metric icon={<Users />} label="Active users" value={formatNumber(users)} note="Last 30 days" />
-      <Metric icon={<DollarSign />} label="Revenue" value={revenue} note="Last 30 days · currencies separated" />
-      <Metric icon={<ArrowUpRight />} label="Requests" value={formatNumber(requests)} note="Last 30 days" />
+      <Metric icon={<Activity />} label={zh ? '产品' : 'Products'} value={String(productRows.length)} note={zh ? '当前工作空间中的活跃产品' : 'Active in this workspace'} />
+      <Metric icon={<Users />} label={zh ? '活跃用户' : 'Active users'} value={formatNumber(users)} note={zh ? '最近 30 天' : 'Last 30 days'} />
+      <Metric icon={<DollarSign />} label={zh ? '收入' : 'Revenue'} value={revenue} note={zh ? '最近 30 天 · 按币种分开' : 'Last 30 days · currencies separated'} />
+      <Metric icon={<ArrowUpRight />} label={zh ? '请求量' : 'Requests'} value={formatNumber(requests)} note={zh ? '最近 30 天' : 'Last 30 days'} />
     </section>
     {firstValue.complete && <section className="activation-center" data-activated={activation.activated}>
       <header><div><span>FIRST VALUE PATH</span><h2>{activation.activated ? 'Your Agent operating loop is active.' : `${activation.completed} of ${activation.total} milestones complete`}</h2><p>{activation.next ? `Next: ${activation.next.title}. ${activation.next.description}` : 'Real evidence now flows from collection through analysis, action, and recurring delivery.'}</p></div><strong>{Math.round((activation.completed / activation.total) * 100)}%</strong></header>
       <div className="activation-progress" role="progressbar" aria-label="First value path" aria-valuemin={0} aria-valuemax={activation.total} aria-valuenow={activation.completed}><i style={{ width: `${(activation.completed / activation.total) * 100}%` }} /></div>
-      <div className="activation-steps">{activation.milestones.map((milestone, index) => <a key={milestone.id} href={milestone.href} data-state={milestone.state}><b>{milestone.complete ? <Check size={15} /> : index + 1}</b><span><strong>{milestone.title}</strong><small>{milestone.description}</small></span></a>)}</div>
+      <div className="activation-steps">{activation.milestones.map((milestone, index) => <Link key={milestone.id} href={milestone.href} data-state={milestone.state}><b>{milestone.complete ? <Check size={15} /> : index + 1}</b><span><strong>{milestone.title}</strong><small>{milestone.description}</small></span></Link>)}</div>
     </section>}
-    <section className="agent-highlight"><div className="agent-avatar"><Bot size={24} /></div><div><span>DASHLOOM AGENT{latestAnalysis ? ` · ${latestAnalysis.createdAt.slice(0, 10)}` : ''}</span><h2>{latestAnalysis?.summary || (empty ? 'Your Agent is waiting for evidence.' : 'Your first evidence brief will appear here.')}</h2><p>{latestAnalysis?.action ? `Priority action: ${latestAnalysis.action}` : empty ? 'Add a product and connect at least one data source. The Agent will never invent an analysis when the evidence layer is empty.' : 'Dashloom is collecting enough history to compare meaningful periods and cite every finding.'}</p></div><a href={latestAnalysis ? `/dashboard/agent/runs/${latestAnalysis.id}` : '/dashboard/agent'}>{latestAnalysis ? 'Inspect evidence →' : 'Open Agent →'}</a></section>
+    <section className="agent-highlight"><div className="agent-avatar"><Bot size={24} /></div><div><span>DASHLOOM AGENT{latestAnalysis ? ` · ${latestAnalysis.createdAt.slice(0, 10)}` : ''}</span><h2>{latestAnalysis?.summary || (empty ? (zh ? 'Agent 正在等待证据。' : 'Your Agent is waiting for evidence.') : (zh ? '第一份证据简报会显示在这里。' : 'Your first evidence brief will appear here.'))}</h2><p>{latestAnalysis?.action ? `${zh ? '优先行动' : 'Priority action'}: ${latestAnalysis.action}` : empty ? (zh ? '添加产品并连接至少一个数据源；证据层为空时，Agent 不会编造分析。' : 'Add a product and connect at least one data source.') : (zh ? 'Dashloom 正在积累足够的历史数据。' : 'Dashloom is collecting enough history to cite every finding.')}</p></div><Link href={latestAnalysis ? `/dashboard/agent/runs/${latestAnalysis.id}` : '/dashboard/agent'}>{latestAnalysis ? (zh ? '检查证据 →' : 'Inspect evidence →') : (zh ? '打开 Agent →' : 'Open Agent →')}</Link></section>
     {openActions.length > 0 && <section className="app-panel overview-actions"><div className="panel-title"><div><span>AGENT ACTION CENTER</span><h2>{openActions.length} highest-priority open moves</h2></div><a href="/dashboard/actions">Manage all →</a></div>{openActions.map((action) => <article className="report-row" key={action.id}><div><strong>{action.title}</strong><small>{action.recommendedAction} · seen {action.occurrenceCount}×</small></div><span>{action.severity}</span><b data-status={action.status}>{action.status.replaceAll('_', ' ')}</b></article>)}</section>}
     {operatingGoals.length > 0 && <section className="app-panel overview-goals"><div className="panel-title"><div><span>OPERATING TARGETS</span><h2>Progress the Agent can reason about</h2></div><a href="/dashboard/products">Manage goals →</a></div>{operatingGoals.slice(0, 4).map((goal) => <article className="report-row" key={goal.goalId}><div><strong>{goal.productName} · {goal.name}</strong><small>{goal.metric} · rolling {goal.period} · {goal.currentValue === null ? 'waiting for data' : `${goal.progressPercent?.toFixed(1)}% of target`}</small></div><span>{goal.currentValue === null ? '—' : goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()}</span><b data-status={goal.status}>{goal.status.replaceAll('_', ' ')}</b></article>)}</section>}
     <div className="overview-columns">
@@ -77,5 +79,5 @@ function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: st
 }
 function formatNumber(value: number) { return Intl.NumberFormat('en', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value); }
 function formatCurrency(value: number, currency: string) { return Intl.NumberFormat('en-US', { style: 'currency', currency, notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value); }
-function LinkButton() { return <a className="app-primary" href="/dashboard/sources">Connect data source</a>; }
+function LinkButton({ zh }: { zh: boolean }) { return <Link className="app-primary" href="/dashboard/sources">{zh ? '连接数据源' : 'Connect data source'}</Link>; }
 function EmptyProducts() { return <div className="panel-empty"><Boxes size={28} /><p>No fictional products here. Add the first product you actually operate.</p><a href="/dashboard/products">Add a product</a></div>; }

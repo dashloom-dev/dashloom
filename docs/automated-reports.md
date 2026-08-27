@@ -1,5 +1,7 @@
 # Self-hosted reports
 
-Community users can generate cited reports on demand or create daily, weekly, and monthly schedules. Scheduled runs execute inside the deployment's Worker, use its connected BYOK provider, preserve product scope, and retry with a stable occurrence identity.
+Community users can generate cited reports on demand or create daily, weekly, and monthly schedules. Scheduled runs use the workspace's connected BYOK provider, preserve product scope, and retry with a stable occurrence identity.
 
-Reports are stored in the deployment. Hosted email, Slack, Discord, Telegram, webhook delivery, and managed alerting are not included in this repository.
+Cloudflare runs due reports from the Worker schedule. Node.js deployments must configure a scheduler to send an authenticated `POST` request to `/api/cron/reports` with `Authorization: Bearer <REPORT_CRON_SECRET>`.
+
+Reports are stored in the selected application database. Hosted email, Slack, Discord, Telegram, webhook delivery, and managed alerting are not included in this repository.

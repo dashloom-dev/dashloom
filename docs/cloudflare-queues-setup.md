@@ -1,5 +1,7 @@
 # Cloudflare Queues setup
 
+> Compatibility reference: the current Community dashboard does not offer infrastructure services as new business data sources. Existing self-hosted mappings and API routes remain available for compatibility.
+
 Dashloom captures a privacy-minimized operational snapshot for a Queue: approximate backlog messages and bytes, the age of the oldest unacknowledged message, and whether delivery is paused. It never reads, peeks, pulls, acknowledges, retries, purges, sends, or stores messages.
 
 ## Create a least-privilege token

@@ -35,8 +35,8 @@ export const marketplaceSkills: MarketplaceSkill[] = [
   },
   {
     kind: 'agent_skill', slug: 'cloudflare-reliability-watch', publisher: 'Dashloom', sourceUrl, review,
-    summary: 'Correlates Cloudflare traffic, errors, deployments, storage, and database health without inventing causes.',
-    manifest: agentSkillManifestSchema.parse({ slug: 'cloudflare-reliability-watch', name: 'Cloudflare Reliability Watch', version: '1.0.0', basePreset: 'operations_analyst', requiredMetrics: ['requests', 'errors', 'cpu_time'], instructions: 'Prioritize customer-impacting reliability changes across request volume, error movement, compute pressure, deployments, storage, and database signals. Treat co-movement as non-causal and recommend a bounded verification step.' }),
+    summary: 'Correlates customer-facing request, error, compute, database, and storage evidence without inventing causes.',
+    manifest: agentSkillManifestSchema.parse({ slug: 'cloudflare-reliability-watch', name: 'Cloudflare Reliability Watch', version: '1.1.0', basePreset: 'operations_analyst', requiredMetrics: ['requests', 'errors', 'cpu_time'], instructions: 'Prioritize customer-impacting reliability changes across request volume, error movement, compute pressure, database activity, and storage signals. Treat co-movement as non-causal and recommend a bounded verification step.' }),
   },
   {
     kind: 'agent_skill', slug: 'agency-executive-brief', publisher: 'Dashloom', sourceUrl, review,
@@ -46,11 +46,10 @@ export const marketplaceSkills: MarketplaceSkill[] = [
 ];
 
 export const marketplaceConnectors: MarketplaceConnector[] = [
-  { kind: 'connector', slug: 'cloudflare-platform', name: 'Cloudflare Platform', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Map multiple Cloudflare accounts and products with least-privilege credentials.', signals: ['Workers', 'D1', 'R2', 'Pages'] },
   { kind: 'connector', slug: 'google-growth', name: 'Google Growth', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Use OAuth with PKCE to discover and map GA4 and Search Console properties.', signals: ['GA4', 'Search Console'] },
   { kind: 'connector', slug: 'bing-search', name: 'Bing Search', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Discover verified Bing Webmaster sites and compare search, query, and page performance.', signals: ['Bing Webmaster', 'Queries', 'Pages'] },
+  { kind: 'connector', slug: 'd1-business-data', name: 'D1 Business Data', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Read validated aggregate business metrics from a dedicated Cloudflare D1 query.', signals: ['Users', 'Orders', 'Subscriptions', 'Revenue'] },
   { kind: 'connector', slug: 'merchant-revenue', name: 'Merchant Revenue', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Normalize gross, refunded, recurring, and paid-customer evidence without combining currencies.', signals: ['Stripe', 'Lemon Squeezy', 'Creem', 'Polar', 'Paddle'] },
-  { kind: 'connector', slug: 'delivery-operations', name: 'Delivery Operations', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/sources', summary: 'Track repository activity, deployments, and backend service health using read-only access.', signals: ['GitHub', 'Vercel', 'Supabase'] },
   { kind: 'connector', slug: 'custom-evidence', name: 'Custom Evidence', publisher: 'Dashloom', status: 'built_in', href: '/dashboard/settings', summary: 'Bring product-specific aggregates through safe pull or authenticated normalized ingestion.', signals: ['Custom REST', 'Ingestion API', 'Connector SDK'] },
 ];
 

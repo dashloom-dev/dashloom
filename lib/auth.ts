@@ -2,6 +2,7 @@ import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { betterAuth } from 'better-auth/minimal';
 import { env, waitUntil } from 'cloudflare:workers';
 import { getDb } from '@/db';
+import { databaseProvider } from '@/db/runtime';
 import * as schema from '@/db/schema';
 import { sendAuthEmail } from './auth-email';
 
@@ -27,7 +28,7 @@ export function createAuth() {
     baseURL,
     secret,
     database: drizzleAdapter(db, {
-      provider: 'sqlite',
+      provider: databaseProvider,
       schema,
     }),
     emailAndPassword: {

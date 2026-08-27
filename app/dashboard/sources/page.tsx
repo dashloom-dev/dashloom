@@ -4,7 +4,6 @@ import { calculatedMetricDefinitions, connectorAccounts, connectorResources, com
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { MetricImportForm } from './metric-import-form';
-import { CloudflareForm } from './cloudflare-form';
 import { GoogleControls } from './google-controls';
 import { BingControls } from './bing-controls';
 import { D1Form } from './d1-form';
@@ -14,36 +13,26 @@ import { getWorkspaceEntitlements } from '@/lib/entitlements';
 import { StripeForm } from './stripe-form';
 import { LemonSqueezyForm } from './lemon-squeezy-form';
 import { CalculatedMetricForm } from './calculated-metric-form';
-import { GitHubForm } from './github-form';
-import { VercelForm } from './vercel-form';
 import { CreemForm } from './creem-form';
-import { SupabaseForm } from './supabase-form';
 import { PolarForm } from './polar-form';
 import { PaddleForm } from './paddle-form';
-import { CloudflareR2Form } from './cloudflare-r2-form';
-import { CloudflarePagesForm } from './cloudflare-pages-form';
-import { CloudflareQueuesForm } from './cloudflare-queues-form';
 import { CustomRestForm } from './custom-rest-form';
 import { ConnectorAccountManager } from './connector-account-manager';
 import { buildConnectorAccountViews } from '@/lib/connector-lifecycle';
 import { ProductIngestionWizard } from './product-ingestion-wizard';
+import Link from 'next/link';
+import { DashboardTabs } from '../dashboard-tabs';
 
 const catalog = [
-  ['cloudflare', 'Cloudflare', 'Workers runtime plus R2 request, error, object, and storage evidence.'],
-  ['cloudflare_pages', 'Cloudflare Pages', 'Privacy-minimized deployment outcomes, environment, cadence, and duration evidence.'],
-  ['cloudflare_queues', 'Cloudflare Queues', 'Best-effort realtime backlog, oldest-message age, and paused-delivery evidence.'],
-  ['google', 'Google Analytics & Search Console', 'Acquisition, engagement, queries, pages, positions, and clicks.'],
-  ['bing', 'Bing Webmaster', 'Search clicks, impressions, CTR, query positions, and page performance.'],
-  ['d1', 'Cloudflare D1 business data', 'Map your own SQL aggregates such as users, subscriptions, or revenue.'],
-  ['stripe', 'Stripe revenue', 'Gross revenue, refunds, MRR, and paid customers in the account default currency.'],
-  ['lemonsqueezy', 'Lemon Squeezy revenue', 'Orders, refunds, recurring revenue, paid customers, and trials with currency separation.'],
-  ['creem', 'Creem revenue', 'Paid transactions, gross revenue, refunds, and chargebacks with production/test isolation.'],
-  ['polar', 'Polar revenue', 'Net order revenue, refunds, and paid transactions with production/sandbox isolation.'],
-  ['paddle', 'Paddle Billing revenue', 'Completed revenue, approved refunds, chargebacks, and recurring transaction evidence.'],
-  ['supabase', 'Supabase operations', 'Project health plus aggregated Auth, Realtime, REST, and Storage request volume.'],
-  ['github', 'GitHub product activity', 'Repository growth, delivery cadence, issue pressure, and maintenance freshness.'],
-  ['vercel', 'Vercel deployments', 'Deployment volume, failures, build duration, production cadence, and release freshness.'],
-  ['custom', 'Custom REST and ingestion', 'Pull contract-versioned metrics over safe HTTPS or push them through the normalized ingestion API.'],
+  ['google', 'Google Analytics & Search Console', 'Google Analytics 与 Search Console', 'Acquisition, engagement, queries, pages, positions, and clicks.', '获客、参与度、搜索词、页面、排名和点击。'],
+  ['bing', 'Bing Webmaster', 'Bing Webmaster', 'Search clicks, impressions, CTR, query positions, and page performance.', '搜索点击、展示、点击率、关键词排名和页面表现。'],
+  ['d1', 'Cloudflare D1 business data', 'Cloudflare D1 业务数据', 'Read aggregate users, subscriptions, orders, and revenue with validated read-only SQL.', '通过经过验证的只读 SQL，读取用户、订阅、订单和收入等聚合业务指标。'],
+  ['stripe', 'Stripe revenue', 'Stripe 收入', 'Gross revenue, refunds, MRR, and paid customers in the account default currency.', '按账户默认币种读取总收入、退款、MRR 和付费客户。'],
+  ['lemonsqueezy', 'Lemon Squeezy revenue', 'Lemon Squeezy 收入', 'Orders, refunds, recurring revenue, paid customers, and trials with currency separation.', '按币种区分订单、退款、经常性收入、付费客户和试用。'],
+  ['creem', 'Creem revenue', 'Creem 收入', 'Paid transactions, gross revenue, refunds, and chargebacks with production/test isolation.', '在生产与测试环境隔离下读取支付交易、总收入、退款和拒付。'],
+  ['polar', 'Polar revenue', 'Polar 收入', 'Net order revenue, refunds, and paid transactions with production/sandbox isolation.', '在生产与沙盒环境隔离下读取订单净收入、退款和支付交易。'],
+  ['paddle', 'Paddle Billing revenue', 'Paddle Billing 收入', 'Completed revenue, approved refunds, chargebacks, and recurring transaction evidence.', '读取已完成收入、已批准退款、拒付和经常性交易证据。'],
+  ['custom', 'Custom REST and ingestion', '自定义 REST 与导入', 'Pull contract-versioned metrics over safe HTTPS or push them through the normalized ingestion API.', '通过安全 HTTPS 拉取带版本契约的指标，或通过标准化导入 API 推送。'],
 ] as const;
 
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
@@ -53,15 +42,19 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   const query = await searchParams;
   const canManage = Boolean(workspace && ['owner', 'admin'].includes(workspace.role));
   const accountViews = buildConnectorAccountViews(connected, accountMappings, recentRuns);
-  return <div className="app-page"><header className="app-page-head"><div><span>DATA LAYER</span><h1>Data sources</h1><p>Credentials belong to this workspace and are never bundled with the public repository.</p></div></header>
-    <section className="resource-grid">{catalog.map(([provider, name, copy]) => {
-      const accounts = connected.filter((item) => item.provider === provider && item.status !== 'disabled');
-      return <article className="resource-card" id={`connector-${provider}`} key={provider}><span className="status-pill">{accounts.length ? `${accounts.length} configured` : 'Not connected'}</span><h2>{name}</h2><p>{copy}</p><footer><span>{accounts.some((item) => item.status === 'connected') ? 'Healthy connection' : 'Configuration required'}</span><a href="/docs">Setup guide →</a></footer></article>;
-    })}</section><ProductIngestionWizard products={productRows} canManage={canManage} /><ConnectorAccountManager accounts={accountViews} canManage={canManage} /><div className="section-label"><span>AUTOMATION</span><h2>Keep connected evidence current</h2></div><SyncScheduleForm schedules={schedules} minimumMinutes={entitlements?.minimumSyncMinutes || 1440} canManage={canManage} /><div className="section-label"><span>CLOUDFLARE OPERATIONS</span><h2>Connect an account and map a Worker</h2></div><CloudflareForm products={productRows} /><div className="section-label"><span>CLOUDFLARE R2</span><h2>Connect bucket operations and storage evidence</h2></div><CloudflareR2Form products={productRows} /><div className="section-label"><span>CLOUDFLARE PAGES</span><h2>Connect privacy-minimized deployment evidence</h2></div><CloudflarePagesForm products={productRows} /><div className="section-label"><span>GOOGLE ACQUISITION</span><h2>Discover and map GA4 and Search Console</h2></div><GoogleControls accounts={connected.filter((account) => account.provider === 'google' && account.status !== 'disabled').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status, lastCheckedAt: account.lastCheckedAt }))} resources={resources} products={productRows} initialStatus={query.google} /><div className="section-label"><span>BING SEARCH</span><h2>Discover and map Bing Webmaster sites</h2></div><BingControls accounts={connected.filter((account) => account.provider === 'bing' && account.status !== 'disabled').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status, lastCheckedAt: account.lastCheckedAt }))} resources={resources} products={productRows} /><div className="section-label"><span>STRIPE REVENUE</span><h2>Connect commercial evidence</h2></div><StripeForm products={productRows} /><div className="section-label"><span>LEMON SQUEEZY REVENUE</span><h2>Connect merchant and subscription evidence</h2></div><LemonSqueezyForm products={productRows} /><div className="section-label"><span>GITHUB PRODUCT ACTIVITY</span><h2>Connect repository growth and delivery evidence</h2></div><GitHubForm products={productRows} /><div className="section-label"><span>VERCEL DEPLOYMENT HEALTH</span><h2>Connect deployment cadence and failure evidence</h2></div><VercelForm products={productRows} /><div className="section-label"><span>BUSINESS METRICS</span><h2>Map read-only Cloudflare D1 aggregates</h2></div><D1Form products={productRows} /><div className="section-label"><span>CALCULATED METRICS</span><h2>Turn normalized inputs into deterministic ratios and KPIs</h2></div><CalculatedMetricForm definitions={definitions} canManage={canManage} /><div className="section-label"><span>COMPETITOR INTELLIGENCE</span><h2>Track comparable evidence with provenance</h2></div><CompetitorForm products={productRows} competitors={competitorRows} /><div className="section-label"><span>CUSTOM REST METRICS</span><h2>Pull your product KPIs from a safe JSON endpoint</h2></div><CustomRestForm products={productRows} connections={connected.filter((account) => account.provider === 'custom').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status }))} canManage={canManage} /><div className="section-label"><span>OPEN INGESTION</span><h2>Import normalized metrics now</h2></div><MetricImportForm products={productRows} />
-    <div className="section-label"><span>CREEM REVENUE</span><h2>Connect AI SaaS payment evidence</h2></div><CreemForm products={productRows} />
-    <div className="section-label"><span>POLAR REVENUE</span><h2>Connect developer-first merchant evidence</h2></div><PolarForm products={productRows} />
-    <div className="section-label"><span>PADDLE BILLING REVENUE</span><h2>Connect merchant-of-record transaction evidence</h2></div><PaddleForm products={productRows} />
-    <div className="section-label"><span>SUPABASE OPERATIONS</span><h2>Connect backend request and project-health evidence</h2></div><SupabaseForm products={productRows} />
-    <div className="section-label"><span>CLOUDFLARE QUEUES</span><h2>Connect queue pressure and delivery-state evidence</h2></div><CloudflareQueuesForm products={productRows} />
-  </div>;
+  const zh = workspace?.locale === 'zh';
+  const title = (eyebrow: string, heading: string) => <div className="section-label"><span>{eyebrow}</span><h2>{heading}</h2></div>;
+  const googleAccounts = connected.filter((account) => account.provider === 'google' && account.status !== 'disabled').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status, lastCheckedAt: account.lastCheckedAt }));
+  const bingAccounts = connected.filter((account) => account.provider === 'bing' && account.status !== 'disabled').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status, lastCheckedAt: account.lastCheckedAt }));
+  const customAccounts = connected.filter((account) => account.provider === 'custom').map((account) => ({ id: account.id, displayName: account.displayName, status: account.status }));
+  const overview = <div className="tab-section-stack"><section className="resource-grid">{catalog.map(([provider, name, nameZh, copy, copyZh]) => { const accounts = connected.filter((item) => item.provider === provider && item.status !== 'disabled'); return <article className="resource-card" id={`connector-${provider}`} key={provider}><span className="status-pill">{accounts.length ? `${accounts.length} ${zh ? '个配置' : 'configured'}` : zh ? '未连接' : 'Not connected'}</span><h2>{zh ? nameZh : name}</h2><p>{zh ? copyZh : copy}</p><footer><span>{accounts.some((item) => item.status === 'connected') ? (zh ? '连接正常' : 'Healthy connection') : (zh ? '需要配置' : 'Configuration required')}</span><Link href="/docs">{zh ? '设置指南' : 'Setup guide'} →</Link></footer></article>; })}</section><ProductIngestionWizard products={productRows} canManage={canManage} /><ConnectorAccountManager accounts={accountViews} canManage={canManage} />{title(zh ? '自动化' : 'AUTOMATION', zh ? '让连接的数据持续保持最新' : 'Keep connected evidence current')}<SyncScheduleForm schedules={schedules} minimumMinutes={entitlements?.minimumSyncMinutes || 1440} canManage={canManage} zh={zh} /></div>;
+  const business = <div className="tab-section-stack">{title('CLOUDFLARE D1', zh ? '读取用户、订单、订阅与收入等业务聚合' : 'Read business aggregates such as users, orders, subscriptions, and revenue')}<D1Form products={productRows} /></div>;
+  const growth = <div className="tab-section-stack">{title('GOOGLE', zh ? '发现并映射 GA4 与 Search Console' : 'Discover and map GA4 and Search Console')}<GoogleControls accounts={googleAccounts} resources={resources} products={productRows} initialStatus={query.google} />{title('BING', zh ? '发现并映射 Bing Webmaster 站点' : 'Discover and map Bing Webmaster sites')}<BingControls accounts={bingAccounts} resources={resources} products={productRows} />{title('STRIPE', zh ? '连接收入证据' : 'Connect commercial evidence')}<StripeForm products={productRows} />{title('LEMON SQUEEZY', zh ? '连接商户和订阅证据' : 'Connect merchant and subscription evidence')}<LemonSqueezyForm products={productRows} />{title('CREEM', zh ? '连接 AI SaaS 支付证据' : 'Connect AI SaaS payment evidence')}<CreemForm products={productRows} />{title('POLAR', zh ? '连接开发者商户证据' : 'Connect developer-first merchant evidence')}<PolarForm products={productRows} />{title('PADDLE', zh ? '连接 Merchant of Record 交易证据' : 'Connect merchant-of-record transaction evidence')}<PaddleForm products={productRows} /></div>;
+  const custom = <div className="tab-section-stack">{title(zh ? '计算指标' : 'CALCULATED METRICS', zh ? '创建确定性的比例和 KPI' : 'Turn normalized inputs into deterministic ratios and KPIs')}<CalculatedMetricForm definitions={definitions} canManage={canManage} />{title(zh ? '竞品情报' : 'COMPETITOR INTELLIGENCE', zh ? '跟踪带来源的可比证据' : 'Track comparable evidence with provenance')}<CompetitorForm products={productRows} competitors={competitorRows} />{title('CUSTOM REST', zh ? '从安全的 JSON 端点读取 KPI' : 'Pull product KPIs from a safe JSON endpoint')}<CustomRestForm products={productRows} connections={customAccounts} canManage={canManage} />{title(zh ? '开放导入' : 'OPEN INGESTION', zh ? '立即导入标准化指标' : 'Import normalized metrics now')}<MetricImportForm products={productRows} /></div>;
+  return <div className="app-page"><header className="app-page-head"><div><span>{zh ? '数据层' : 'DATA LAYER'}</span><h1>{zh ? '数据源' : 'Data sources'}</h1><p>{zh ? '这里只连接真实业务、获客、搜索和收入数据；Workers、Vercel、AWS 与技术框架属于部署配置，不是业务数据源。' : 'Connect real business, acquisition, search, and revenue data here; Workers, Vercel, AWS, and frameworks belong to deployment configuration, not business data sources.'}</p></div></header><DashboardTabs tabs={[
+    { id: 'overview', label: zh ? '概览与同步' : 'Overview & sync', description: zh ? '连接状态、导入与计划任务' : 'Status, ingestion, and schedules', content: overview },
+    { id: 'business', label: zh ? '业务数据' : 'Business data', description: 'Cloudflare D1', content: business },
+    { id: 'growth', label: zh ? '增长与收入' : 'Growth & revenue', description: zh ? '流量、搜索与支付平台' : 'Acquisition, search, and billing', content: growth },
+    { id: 'custom', label: zh ? '自定义与计算' : 'Custom & calculated', description: zh ? '计算指标、REST、竞品与导入' : 'Calculated metrics, REST, competitors, and ingestion', content: custom },
+  ]} /></div>;
 }
