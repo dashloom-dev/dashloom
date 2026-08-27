@@ -8,3 +8,5 @@ REPORT_CRON_SECRET=replace-with-an-independent-random-secret-at-least-32-charact
 AUTH_EMAIL_WEBHOOK_URL=https://your-transactional-email-relay.example/send
 AUTH_EMAIL_WEBHOOK_SECRET=replace-with-your-email-relay-authentication-secret
 AUTH_REQUIRE_EMAIL_VERIFICATION=false
+# Deployment-wide default for authentication and newly created workspaces: en or zh-CN.
+DASHLOOM_DEFAULT_LOCALE=en

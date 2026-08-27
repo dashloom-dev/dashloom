@@ -5,6 +5,7 @@ import { getDb } from '@/db';
 import { databaseProvider } from '@/db/runtime';
 import * as schema from '@/db/schema';
 import { sendAuthEmail } from './auth-email';
+import { getDeploymentLocale } from './deployment-locale';
 
 function requireAuthConfiguration() {
   const secret = env.BETTER_AUTH_SECRET;
@@ -21,6 +22,8 @@ function requireAuthConfiguration() {
 export function createAuth() {
   const { secret, baseURL } = requireAuthConfiguration();
   const db = getDb();
+  const defaultLocale = getDeploymentLocale();
+  const chinese = defaultLocale === 'zh';
   const requireEmailVerification = (env as unknown as { AUTH_REQUIRE_EMAIL_VERIFICATION?: string }).AUTH_REQUIRE_EMAIL_VERIFICATION === 'true';
 
   return betterAuth({
@@ -39,7 +42,7 @@ export function createAuth() {
       resetPasswordTokenExpiresIn: 60 * 60,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
-        waitUntil(sendAuthEmail({ to: user.email, subject: 'Reset your Dashloom password', text: `Use this one-time link within 60 minutes to reset your Dashloom password: ${url}` }).catch((error) => console.error('Password reset email failed.', error)));
+        waitUntil(sendAuthEmail({ to: user.email, subject: chinese ? '重置你的 Dashloom 密码' : 'Reset your Dashloom password', text: chinese ? `请在 60 分钟内使用此一次性链接重置 Dashloom 密码：${url}` : `Use this one-time link within 60 minutes to reset your Dashloom password: ${url}` }).catch((error) => console.error('Password reset email failed.', error)));
       },
     },
     emailVerification: {
@@ -47,7 +50,7 @@ export function createAuth() {
       sendOnSignIn: requireEmailVerification,
       expiresIn: 60 * 60,
       sendVerificationEmail: async ({ user, url }) => {
-        waitUntil(sendAuthEmail({ to: user.email, subject: 'Verify your Dashloom email', text: `Use this one-time link within 60 minutes to verify your Dashloom email address: ${url}` }).catch((error) => console.error('Email verification delivery failed.', error)));
+        waitUntil(sendAuthEmail({ to: user.email, subject: chinese ? '验证你的 Dashloom 邮箱' : 'Verify your Dashloom email', text: chinese ? `请在 60 分钟内使用此一次性链接验证 Dashloom 邮箱：${url}` : `Use this one-time link within 60 minutes to verify your Dashloom email address: ${url}` }).catch((error) => console.error('Email verification delivery failed.', error)));
       },
     },
     session: {
@@ -71,8 +74,9 @@ export function createAuth() {
               db.insert(schema.workspaces).values({
                 id: workspaceId,
                 slug: `${baseSlug}-${suffix || workspaceId.slice(0, 8)}`,
-                name: `${createdUser.name}'s workspace`,
+                name: chinese ? `${createdUser.name}的工作空间` : `${createdUser.name}'s workspace`,
                 ownerUserId: createdUser.id,
+                locale: defaultLocale,
               }),
               db.insert(schema.workspaceMembers).values({
                 workspaceId,

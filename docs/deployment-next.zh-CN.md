@@ -12,6 +12,7 @@ Cloudflare Workers、Vercel 和 AWS 是部署目标，不是业务数据源，�
 
 把 `node-runtime.env.example` 中的变量配置到目标平台，并始终配置认证、凭据加密和 Cron Secret。然后只选择一种存储后端：
 
+- 语言：设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。它决定登录与找回密码的默认语言，以及新工作空间的初始语言。工作空间 Owner 之后仍可切换语言；修改部署变量不会覆盖已有工作空间。
 - D1：设置 `DASHLOOM_DATABASE=d1`，并使用只限定目标数据库的专用 Token 配置三个 `CLOUDFLARE_*` 变量。
 - Supabase：设置 `DASHLOOM_DATABASE=supabase` 和 `SUPABASE_DATABASE_URL`。Serverless 托管优先使用 Supabase Transaction Pooler 地址。系统默认强制 TLS，并关闭 Prepared Statement 以兼容连接池。
 
