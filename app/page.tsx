@@ -14,7 +14,7 @@ const products = [
   ['Signal CRM', 'CRM', '11,903', '$14.2K', '932K'],
 ];
 
-const sources = ['Cloudflare Workers', 'Google Analytics 4', 'Search Console', 'Stripe revenue', 'D1 metrics'];
+const sources = ['Cloudflare Workers', 'Google Analytics 4', 'Search Console', 'Bing Webmaster', 'Stripe revenue', 'D1 metrics'];
 
 const intelligenceViews = [
   ['Indie Hacker', 'Portfolio Analyst', 'Products, traffic, revenue, and operations'],

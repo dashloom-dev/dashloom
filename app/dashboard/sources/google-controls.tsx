@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Account = { id: string; displayName: string; status: string; lastCheckedAt: string | null };
-type Resource = { id: string; connectorAccountId: string; type: 'ga4' | 'gsc' | 'worker' | 'database' | 'custom'; resourceId: string; displayName: string; domainsJson: string };
+type Resource = { id: string; connectorAccountId: string; type: 'ga4' | 'gsc' | 'bing_site' | 'worker' | 'database' | 'custom'; resourceId: string; displayName: string; domainsJson: string };
 
 export function GoogleControls({ accounts, resources, products, initialStatus }: { accounts: Account[]; resources: Resource[]; products: Array<{ id: string; name: string }>; initialStatus?: string }) {
   const router = useRouter();

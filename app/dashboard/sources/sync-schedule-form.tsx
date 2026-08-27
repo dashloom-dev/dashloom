@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Schedule = { id: string; source: string; frequencyMinutes: number; enabled: boolean; nextRunAt: string; lastSuccessAt: string | null; retryAttempt: number; lastError: string | null };
-const sources = [['cloudflare', 'Cloudflare Workers'], ['cloudflare_r2', 'Cloudflare R2'], ['cloudflare_pages', 'Cloudflare Pages'], ['cloudflare_queues', 'Cloudflare Queues'], ['google', 'Google'], ['stripe', 'Stripe revenue'], ['lemonsqueezy', 'Lemon Squeezy revenue'], ['creem', 'Creem revenue'], ['polar', 'Polar revenue'], ['supabase', 'Supabase operations'], ['github', 'GitHub'], ['vercel', 'Vercel'], ['d1', 'D1 business metrics'], ['custom', 'Custom REST metrics']] as const;
+const sources = [['cloudflare', 'Cloudflare Workers'], ['cloudflare_r2', 'Cloudflare R2'], ['cloudflare_pages', 'Cloudflare Pages'], ['cloudflare_queues', 'Cloudflare Queues'], ['google', 'Google'], ['bing', 'Bing Webmaster'], ['stripe', 'Stripe revenue'], ['lemonsqueezy', 'Lemon Squeezy revenue'], ['creem', 'Creem revenue'], ['polar', 'Polar revenue'], ['supabase', 'Supabase operations'], ['github', 'GitHub'], ['vercel', 'Vercel'], ['d1', 'D1 business metrics'], ['custom', 'Custom REST metrics']] as const;
 
 export function SyncScheduleForm({ schedules, minimumMinutes, canManage }: { schedules: Schedule[]; minimumMinutes: number; canManage: boolean }) {
   const router = useRouter(); const [message, setMessage] = useState(''); const [pending, setPending] = useState(false);

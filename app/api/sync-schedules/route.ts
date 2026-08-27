@@ -9,7 +9,7 @@ import { getWorkspaceEntitlements } from '@/lib/entitlements';
 import { nextSyncTime } from '@/lib/sync-time';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 
-const syncSource = z.enum(['cloudflare', 'cloudflare_r2', 'cloudflare_pages', 'cloudflare_queues', 'google', 'd1', 'stripe', 'lemonsqueezy', 'creem', 'polar', 'paddle', 'supabase', 'github', 'vercel', 'custom']);
+const syncSource = z.enum(['cloudflare', 'cloudflare_r2', 'cloudflare_pages', 'cloudflare_queues', 'google', 'bing', 'd1', 'stripe', 'lemonsqueezy', 'creem', 'polar', 'paddle', 'supabase', 'github', 'vercel', 'custom']);
 const input = z.object({ source: syncSource, frequencyMinutes: z.number().int().min(15).max(10080), enabled: z.boolean().default(true) });
 async function context(request: Request) { const session = await createAuth().api.getSession({ headers: request.headers }); if (!session) return null; const workspace = await getPrimaryWorkspace(session.user.id); return workspace ? { session, workspace } : null; }
 export async function GET(request: Request) { const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); return NextResponse.json({ schedules: await getDb().select().from(syncSchedules).where(eq(syncSchedules.workspaceId, value.workspace.id)).orderBy(syncSchedules.source) }); }
