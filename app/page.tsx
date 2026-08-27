@@ -1,3 +1,5 @@
+import { Brand, BrandMark } from '@/components/brand';
+
 const metrics = [
   { label: 'Products', value: '12', note: 'Across one workspace', tone: 'mint' },
   { label: 'New users', value: '3,482', note: '+18.7% this month', tone: 'blue' },
@@ -27,8 +29,7 @@ export default function Home() {
     <main>
       <nav className="site-nav" aria-label="Primary navigation">
         <a className="brand" href="#top" aria-label="Dashloom home">
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-          <span>Dashloom</span>
+          <Brand priority />
         </a>
         <div className="nav-links">
           <a href="#product">Product</a>
@@ -63,7 +64,7 @@ export default function Home() {
         </div>
         <div className="app-shell">
           <aside className="app-sidebar">
-            <div className="app-brand"><span className="brand-mark small" aria-hidden="true"><i /><i /><i /></span><strong>Dashloom</strong></div>
+            <div className="app-brand"><BrandMark compact /><strong>Dashloom</strong></div>
             <small>WORKSPACE</small>
             <a className="active" href="#preview"><span>⌘</span>Overview</a>
             <a href="#preview"><span>◷</span>Lifetime</a>
@@ -127,7 +128,7 @@ export default function Home() {
         <div className="open-copy"><p>Deploy Dashloom Community on your own infrastructure and connect an OpenAI-compatible API endpoint, key, and model. Data, schedules, and reports remain under your control.</p><a className="button" href="https://github.com/dashloom-dev/dashloom">View on GitHub <span>↗</span></a></div>
       </section>
 
-      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></a><p>Turn every product signal into your next move.</p><span className="footer-links"><a href="/docs">Docs</a><a href="/status">Deployment status</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/dashloom-dev/dashloom/security">Security</a><i>© 2026 Dashloom</i></span></footer>
+      <footer><a className="brand" href="#top"><Brand /></a><p>Turn every product signal into your next move.</p><span className="footer-links"><a href="/docs">Docs</a><a href="/status">Deployment status</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/dashloom-dev/dashloom/security">Security</a><i>© 2026 Dashloom</i></span></footer>
     </main>
   );
 }

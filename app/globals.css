@@ -10,12 +10,11 @@ main { min-height:100vh; overflow:hidden; }
 
 .site-nav { width:min(1180px,calc(100% - 40px)); height:76px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); position:relative; z-index:5; }
 .brand { display:inline-flex; align-items:center; gap:12px; font-size:19px; font-weight:720; letter-spacing:-.03em; }
-.brand-mark { width:34px; height:29px; display:grid; align-content:center; gap:5px; }
-.brand-mark i { display:block; height:2px; border-radius:4px; background:linear-gradient(90deg,#35d9ce,#60e8a9); box-shadow:0 0 13px rgba(67,225,186,.35); transform-origin:left; }
-.brand-mark i:first-child { width:19px; margin-left:8px; transform:skewX(36deg); }
-.brand-mark i:nth-child(2) { width:31px; }
-.brand-mark i:last-child { width:20px; margin-left:5px; transform:skewX(-36deg); }
-.brand-mark.small { width:27px; transform:scale(.8); transform-origin:left; }
+.brand-mark { width:34px; height:34px; display:block; flex:0 0 auto; filter:drop-shadow(0 0 11px rgba(53,217,206,.2)); transition:filter .2s ease,transform .2s ease; }
+.brand-mark:not(img) { background:url('/brand/logo-mark.png') center/contain no-repeat; }
+.brand-mark:not(img) i { display:none; }
+.brand:hover .brand-mark { filter:drop-shadow(0 0 15px rgba(84,230,173,.35)); transform:translateY(-1px); }
+.app-brand .brand-mark { width:26px; height:26px; }
 .nav-links { display:flex; gap:34px; color:#9eaea9; font-size:13px; }
 .nav-links a:hover,.text-link:hover { color:white; }
 .nav-actions { display:flex; align-items:center; gap:22px; font-size:13px; }
