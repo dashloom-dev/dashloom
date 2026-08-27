@@ -3,6 +3,7 @@ import { BarChart3, Bot, Boxes, Cable, Clock3, LayoutDashboard, ListChecks, Radi
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { SignOutButton } from './sign-out-button';
+import { Brand } from '@/components/brand';
 import './product.css';
 import './readability.css';
 
@@ -33,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const workspace = await getPrimaryWorkspace(user.id);
   return <main className="product-app">
     <aside className="product-sidebar">
-      <Link className="brand" href="/dashboard"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></Link>
+      <Link className="brand" href="/dashboard"><Brand priority /></Link>
       <div className="workspace-switcher"><small>COMMUNITY WORKSPACE</small><strong>{workspace?.name || 'Workspace setup'}</strong><span>self-hosted · BYOK</span></div>
       <nav aria-label="Product navigation">{navigation.map(([href, label, Icon]) => <Link href={href} key={href}><Icon size={19} /><span>{label}</span></Link>)}</nav>
       <div className="view-navigation"><small>INTELLIGENCE VIEWS</small>{intelligenceViews.map(([href, label], index) => <Link href={href} key={href}><b>0{index + 1}</b><span>{label}</span></Link>)}</div>

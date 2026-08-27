@@ -1,0 +1,13 @@
+{
+  "name": "Dashloom",
+  "short_name": "Dashloom",
+  "description": "Open-source AI product intelligence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#26292F",
+  "theme_color": "#26292F",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

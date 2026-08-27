@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authClient } from '@/lib/auth-client';
+import { Brand } from '@/components/brand';
 
 export function LoginForm({ next = '/dashboard' }: { next?: string }) {
   const router = useRouter();
@@ -44,7 +45,7 @@ export function LoginForm({ next = '/dashboard' }: { next?: string }) {
 
   return <main className="auth-page">
     <section className="auth-intro">
-      <Link className="brand" href="/"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Dashloom</span></Link>
+      <Link className="brand" href="/"><Brand priority /></Link>
       <div><span>AI PRODUCT INTELLIGENCE</span><h1>Connect the facts.<br />Let your Agent<br />find the signal.</h1><p>Bring Cloudflare, Google, revenue, and competitor data into one evidence layer built for operators managing multiple products.</p></div>
     </section>
     <section className="auth-panel">
