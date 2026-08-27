@@ -1,5 +1,7 @@
 # Connect Cloudflare Analytics
 
+> Compatibility reference: the current Community dashboard does not offer this as a new business data-source connection. Existing self-hosted mappings and API routes remain in the codebase for compatibility; new operational aggregates should use the normalized ingestion path.
+
 Dashloom reads Worker runtime signals plus R2 request, error, storage, object, and pending-upload signals through Cloudflare's GraphQL Analytics API. Each workspace can connect more than one Cloudflare account. A product can map one Worker and one R2 analytics bucket independently.
 
 ## Create a least-privilege token

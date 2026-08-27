@@ -72,8 +72,8 @@ export async function DELETE(request: Request) {
   const value = await context(request); if (!value) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!['owner', 'admin'].includes(value.workspace.role)) return NextResponse.json({ error: 'Owner or admin access required' }, { status: 403 });
   const id = new URL(request.url).searchParams.get('id'); if (!id || !z.string().uuid().safeParse(id).success) return NextResponse.json({ error: 'Valid schedule ID is required.' }, { status: 400 });
-  const result = await getDb().delete(reportSchedules).where(and(eq(reportSchedules.id, id), eq(reportSchedules.workspaceId, value.workspace.id)));
-  if (!result.meta.changes) return NextResponse.json({ error: 'Report schedule not found.' }, { status: 404 });
+  const result = await getDb().delete(reportSchedules).where(and(eq(reportSchedules.id, id), eq(reportSchedules.workspaceId, value.workspace.id))).returning({ id: reportSchedules.id });
+  if (!result.length) return NextResponse.json({ error: 'Report schedule not found.' }, { status: 404 });
   await recordAuditEvent({ workspaceId: value.workspace.id, actorUserId: value.session.user.id, action: 'report_schedule.deleted', targetType: 'report_schedule', targetId: id });
   return NextResponse.json({ deleted: true });
 }

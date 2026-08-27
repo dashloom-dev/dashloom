@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "paths": {
+      "@/db": ["./db/postgres.ts"],
+      "@/db/schema": ["./db/schema.pg.ts"],
+      "@/db/runtime": ["./db/runtime.pg.ts"],
+      "@/db/dialect": ["./db/dialect.pg.ts"],
+      "@/*": ["./*"]
+    }
+  },
+  "exclude": ["node_modules", "db/index.ts", "db/schema.ts", "db/runtime.ts", "db/dialect.ts", "db/remote-d1.ts", "db/node-cloudflare-workers.ts"]
+}

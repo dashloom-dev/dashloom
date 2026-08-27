@@ -2,9 +2,9 @@
 
 [简体中文](README.zh-CN.md) · English
 
-Self-hosted AI product intelligence for teams that want one evidence layer across product analytics, revenue, acquisition, infrastructure, and delivery systems.
+Self-hosted AI product intelligence for teams that want one evidence layer across product analytics, revenue, acquisition, search, and business operations.
 
-Dashloom Community normalizes operational signals, calculates deterministic metrics, and lets specialized Agents analyze the resulting evidence with your own OpenAI-compatible model. Your application, D1 database, provider credentials, schedules, and reports run in infrastructure you control.
+Dashloom Community normalizes operational signals, calculates deterministic metrics, and lets specialized Agents analyze the resulting evidence with your own OpenAI-compatible model. Your application, D1 or Supabase PostgreSQL database, provider credentials, schedules, and reports run in infrastructure you control.
 
 ![Dashloom Community overview with fictional data](docs/images/readme/overview-en.png)
 
@@ -16,9 +16,12 @@ Dashloom Community normalizes operational signals, calculates deterministic metr
 - Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Cloudflare Operations, and Agency Client.
 - BYOK Agent conversations, Executive Briefs, model comparison, task history, and evidence citations.
 - Signal Radar for deterministic period comparisons and cross-signal hypotheses without causal overclaiming.
-- Cloudflare, Google Analytics/Search Console, Bing Webmaster, Stripe revenue, Lemon Squeezy, Creem, Polar, Paddle, Supabase, GitHub, Vercel, D1, and Custom REST connectors.
+- Google Analytics/Search Console, Bing Webmaster, Cloudflare D1 business aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, and Custom REST connectors.
 - Manual imports, open ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
+- English and Simplified Chinese dashboard navigation, workspace-level locale preferences, and focused tabbed workflows.
 - Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable evidence export.
+
+Cloudflare Workers, Vercel, AWS, D1 application storage, and Supabase PostgreSQL are deployment or storage choices—not business data sources. The Dashboard catalog only lists systems that provide product, acquisition, search, revenue, or explicitly imported business evidence.
 
 Dashloom Community is a standalone open-source product. It has no source, package, runtime, database, deployment, Git, or build dependency on the private Dashloom Cloud repository.
 
@@ -36,6 +39,10 @@ Each product owns its connector mappings, normalized metrics, goals, competitors
 
 ![Dashloom product portfolio with fictional data](docs/images/readme/products-en.png)
 
+### Bilingual, task-focused workspace
+
+Choose English or Simplified Chinese from the dashboard account menu or **Settings → Workspace**. The preference is stored on the workspace and applies to navigation and core product pages. Products, data sources, Agent analysis, and settings use tabs to keep long operational workflows focused without changing their authorization or data boundaries.
+
 ## Architecture
 
 ```text
@@ -44,7 +51,7 @@ Product UI
     ▼
 Authenticated server routes ──► workspace and product authorization
     │
-    ├──► provider adapters ──► normalized evidence in D1
+    ├──► provider adapters ──► normalized evidence in D1 or Supabase PostgreSQL
     ├──► deterministic metrics, goals, health, and Signal Radar
     └──► BYOK Agent orchestration ──► cited findings and actions
 ```
@@ -60,9 +67,9 @@ See [the architecture guide](docs/architecture.md) for the complete boundary and
 
 - Node.js 22.13 or newer
 - npm 10 or newer
-- A Cloudflare account for production deployment
+- A Cloudflare account for Workers/D1 deployment, or a Node.js host plus Supabase for the PostgreSQL path
 
-> **Database boundary:** Community v0.1 starts from a new, Community-only D1 baseline. Use a fresh D1 database; do not point this repository at an existing Dashloom Cloud or pre-release Dashloom database.
+> **Database boundary:** Community uses a standalone Community-only schema. Use a fresh D1 database or Supabase project; do not point this repository at an existing Dashloom Cloud or pre-release Dashloom database.
 - Wrangler 4.x, installed through this repository's development dependencies
 - An OpenAI-compatible provider key if you want to run Agents
 
@@ -138,7 +145,7 @@ Open **Products**, then add the product name, public domain, and category. A pro
 
 Open **Data sources** and choose one path:
 
-- connect a supported provider with a least-privilege credential;
+- connect Google Analytics/Search Console, Bing Webmaster, or a supported revenue provider with a least-privilege credential;
 - configure a read-only aggregate D1 query;
 - import normalized metric rows manually;
 - create a scoped ingestion key for the TypeScript SDK or Connector Worker;
@@ -148,7 +155,7 @@ After synchronization, check the product coverage card for source freshness, sto
 
 ### Step 3: connect your model
 
-Open **Settings**, add an OpenAI-compatible BYOK provider, and select the model to use. The credential is encrypted with `CREDENTIALS_ENCRYPTION_KEY` before it is stored in D1.
+Open **Settings**, add an OpenAI-compatible BYOK provider, and select the model to use. The credential is encrypted with `CREDENTIALS_ENCRYPTION_KEY` before it is stored in the selected application database.
 
 Community Agent execution is BYOK-only. No managed model allowance or Dashloom subscription is required.
 
@@ -168,7 +175,7 @@ An Agent run freezes the evidence bundle used for the answer. Findings must cite
 - Promote useful findings into **Agent actions** and measure outcomes.
 - Turn repeatable improvement work into **Growth missions**.
 - Create local report and synchronization schedules.
-- Keep the Worker cron enabled so due schedules and action outcomes are processed.
+- Keep the Worker cron enabled on Cloudflare, or invoke the authenticated maintenance and report endpoints from the scheduler on your Node.js hosting platform.
 
 ## Environment reference
 
@@ -184,6 +191,13 @@ An Agent run freezes the evidence bundle used for the answer. Findings must cite
 | `AUTH_EMAIL_WEBHOOK_SECRET` | For email delivery | Authentication secret sent to the email relay. |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | Optional | Set to `true` when production email delivery is configured. |
 | `NEXT_PUBLIC_APP_URL` | Optional | Public, non-secret origin override; belongs in `.env`. |
+| `DASHLOOM_DATABASE` | Node deployment | Selects `d1` or `supabase` at build and runtime. |
+| `CLOUDFLARE_ACCOUNT_ID` | Node + D1 | Cloudflare account that owns the application D1 database. |
+| `CLOUDFLARE_D1_DATABASE_ID` | Node + D1 | UUID of the intended application D1 database. |
+| `CLOUDFLARE_D1_API_TOKEN` | Node + D1 | Dedicated server-only token used by the parameterized Remote D1 adapter. |
+| `SUPABASE_DATABASE_URL` | Supabase storage | Server-only PostgreSQL connection or transaction-pooler URL. |
+| `SUPABASE_DATABASE_POOL_SIZE` | Optional | Per-instance PostgreSQL connection cap from 1–20; defaults to 5. |
+| `SUPABASE_DATABASE_SSL` | Optional | Keep TLS required; use `disable` only for a trusted local or self-hosted PostgreSQL environment. |
 
 Connector and model keys are entered through authenticated product forms. Do not put them in public environment variables or commit them to the repository.
 
@@ -211,13 +225,21 @@ Connector and model keys are entered through authenticated product forms. Do not
 
 A migration file existing in the repository is not proof that production was migrated. Remote production schema work is complete only after the intended D1 database has been applied and verified.
 
+## Production deployment on Vercel or AWS
+
+The Node.js runtime supports two complete storage paths: Remote D1 through Cloudflare's authenticated HTTP API, or Supabase PostgreSQL through the pooled PostgreSQL adapter. The Supabase path stores authentication, workspace configuration, normalized evidence, Agent state, reports, schedules, and audit history in the same 38-table application model.
+
+See the [Vercel and AWS deployment guide](docs/deployment-next.md) for backend selection, build commands, scheduler integration, pooler settings, migrations, and verification. A successful build does not prove that a remote database was migrated.
+
 ## Validation
 
 ```bash
 npm run typecheck
+npm run typecheck:supabase
 npm run lint
 npm test
 npm run build
+npm run build:supabase
 npm run validate:extensions
 npm run validate:connector-worker
 npm run eval:agent
@@ -230,11 +252,15 @@ npm run eval:agent
 - **Provider credentials cannot be saved:** configure a separate `CREDENTIALS_ENCRYPTION_KEY` of at least 32 characters.
 - **Agent is not ready:** connect a BYOK model and verify that the selected product has recent metrics matching that specialist.
 - **Signal Radar is empty:** collect two comparable periods of evidence; Dashloom will not invent signals when the threshold is not crossed.
-- **Scheduled work does not run:** confirm the Worker cron is deployed and inspect automation and sync status in the application.
+- **Remote D1 is unavailable on Node.js:** verify the account ID, database UUID, and dedicated API token belong to the same intended database.
+- **Supabase cannot connect:** keep the connection URL server-only, prefer the transaction pooler on serverless platforms, and verify the per-instance pool cap.
+- **Scheduled work does not run:** confirm the Worker cron is deployed, or configure the Node.js platform scheduler to call the authenticated maintenance and report endpoints.
 
 ## Documentation
 
 - [Architecture and security boundaries](docs/architecture.md)
+- [Vercel and AWS deployment](docs/deployment-next.md)
+- [Backup and recovery](docs/backup-and-recovery.md)
 - [First-value path](docs/first-value-path.md)
 - [Connector account lifecycle](docs/connector-account-lifecycle.md)
 - [Bing Webmaster setup](docs/bing-webmaster-setup.md)

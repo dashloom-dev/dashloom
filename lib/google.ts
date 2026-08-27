@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, lte, sql } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { connectorAccounts, connectorResources, metricPoints, oauthStates, productConnectorMappings, products, syncRuns } from '@/db/schema';
 import { decryptSecret, encryptSecret } from './crypto';
@@ -36,7 +36,7 @@ export async function createGoogleAuthorization(workspaceId: string, userId: str
   const state = randomToken(32);
   const verifier = randomToken(48);
   const id = crypto.randomUUID();
-  await getDb().delete(oauthStates).where(and(eq(oauthStates.provider, 'google'), sql`${oauthStates.expiresAt} <= datetime('now')`));
+  await getDb().delete(oauthStates).where(and(eq(oauthStates.provider, 'google'), lte(oauthStates.expiresAt, new Date().toISOString())));
   await getDb().insert(oauthStates).values({ id, workspaceId, userId, provider: 'google', stateHash: await sha256(state), encryptedVerifier: await encryptSecret(verifier, `oauth-state:${id}`), redirectUri, expiresAt: new Date(Date.now() + 10 * 60000).toISOString() });
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   url.searchParams.set('client_id', clientId);

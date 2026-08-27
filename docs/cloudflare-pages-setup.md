@@ -1,5 +1,7 @@
 # Connect Cloudflare Pages deployment health
 
+> Compatibility reference: the current Community dashboard does not offer deployment platforms as new business data sources. Existing self-hosted mappings and API routes remain available for compatibility.
+
 Dashloom connects Cloudflare Pages deployment outcomes to Operations and Portfolio Agent evidence. It stores only deployment time, production/preview environment, skipped state, final stage outcome, and derived duration. It does not persist environment variables, build configuration, commit hashes or messages, branches, repository identity, deployment URLs, aliases, source files, build logs, or deployment contents.
 
 ## Create least-privilege access

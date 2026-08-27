@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { AgentScopeReadiness } from '@/lib/agent-scope';
 
 const specialists = [
@@ -57,6 +58,6 @@ export function ExecutiveBriefForm({ readinessByScope, products, capacity, brief
       <label>Executive decision question<textarea name="question" required minLength={3} maxLength={1000} rows={3} defaultValue="Across the selected specialists, what needs executive attention first, why does it matter, and what should we do next?" /></label>
       <footer><small>{message || (selected.length > capacity.capacity ? `This selection needs ${selected.length} runs; capacity is ${capacity.capacity}.` : 'Specialist failures are isolated. Every successful priority links to its own frozen evidence run.')}</small><button className="app-primary" disabled={!runnable || pending}>{pending ? 'Coordinating…' : `Run ${selected.length || 0} specialists`}</button></footer>
     </form>
-    <div className="executive-history"><h3>Recent Executive Briefs</h3>{briefs.map((brief) => <a href={`/dashboard/agent/briefings/${brief.id}`} key={brief.id}><span><strong>{brief.question}</strong><small>{brief.scopeLabel} · {brief.createdAt.slice(0, 10)} · {brief.successCount} completed{brief.failureCount ? ` · ${brief.failureCount} failed` : ''}</small></span><b data-status={brief.status}>{brief.status}</b></a>)}{!briefs.length && <div className="panel-empty"><p>No coordinated brief has run in this workspace.</p></div>}</div>
+    <div className="executive-history"><h3>Recent Executive Briefs</h3>{briefs.map((brief) => <Link href={`/dashboard/agent/briefings/${brief.id}`} key={brief.id}><span><strong>{brief.question}</strong><small>{brief.scopeLabel} · {brief.createdAt.slice(0, 10)} · {brief.successCount} completed{brief.failureCount ? ` · ${brief.failureCount} failed` : ''}</small></span><b data-status={brief.status}>{brief.status}</b></Link>)}{!briefs.length && <div className="panel-empty"><p>No coordinated brief has run in this workspace.</p></div>}</div>
   </section>;
 }

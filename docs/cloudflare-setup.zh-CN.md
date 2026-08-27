@@ -1,5 +1,7 @@
 # 连接 Cloudflare Analytics
 
+> 兼容性说明：当前 Community 控制台不再把它作为新的业务数据源连接入口。代码仍保留已有自托管映射和 API 路由以兼容旧部署；新的运维聚合数据应通过标准化导入路径接入。
+
 Dashloom 通过 Cloudflare GraphQL Analytics API 读取 Worker 运行指标，以及 R2 请求、错误、存储、对象和待完成上传指标。一个工作空间可以连接多个 Cloudflare 账号；每个产品可以分别映射一个 Worker 和一个 R2 Analytics Bucket。
 
 ## 创建最小权限 Token

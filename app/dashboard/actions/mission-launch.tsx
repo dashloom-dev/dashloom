@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 type Member = { userId: string; name: string; email: string };
 
@@ -24,7 +25,7 @@ export function MissionLaunch({ actionId, actionTitle, recommendedAction, member
     if (!response.ok) { setMessage(result.error || 'Growth mission could not be created.'); return; }
     router.push('/dashboard/missions'); router.refresh();
   }
-  if (launched) return <div className="mission-launched"><strong>Growth mission launched</strong><a href="/dashboard/missions">Track progress →</a></div>;
+  if (launched) return <div className="mission-launched"><strong>Growth mission launched</strong><Link href="/dashboard/missions">Track progress →</Link></div>;
   return <details className="mission-launch"><summary>Launch a measurable growth mission</summary><form onSubmit={submit}>
     <label>Mission title<input name="title" defaultValue={actionTitle} required minLength={2} maxLength={160} /></label>
     <label className="mission-hypothesis">Hypothesis<textarea name="hypothesis" required minLength={10} maxLength={700} rows={3} defaultValue={`If we ${actionPhrase}, the linked product metric should move toward the target.`} /></label>

@@ -1,5 +1,7 @@
 # Supabase operations setup
 
+> Compatibility reference: Supabase PostgreSQL is now an application storage option, not a business data source in the current Community dashboard. Existing Management API mappings remain in the codebase for compatibility.
+
 Dashloom imports project status and aggregated daily request counts from the Supabase Management API. It stores Auth, Realtime, REST, Storage, and combined API request totals plus a `1`/`0` project-health signal. It never reads database tables, Auth users, logs, API keys, project secrets, SQL, request paths, or payloads.
 
 ## Create least-privilege access

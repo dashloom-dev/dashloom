@@ -12,7 +12,7 @@ The public repository currently distributes five Agent Skill packs, one for each
 - Cloudflare Reliability Watch;
 - Agency Executive Brief.
 
-The connector catalog links to the built-in Cloudflare, Google, merchant revenue, delivery operations, Custom REST, ingestion API, and Connector SDK paths. Connector credentials remain server-side and workspace scoped.
+The connector catalog links to the current built-in Google, Bing, D1 business data, merchant revenue, Custom REST, ingestion API, and Connector SDK paths. Deployment platforms and application storage backends are intentionally not listed as business data sources. Connector credentials remain server-side and workspace scoped.
 
 ## Installation and trust
 

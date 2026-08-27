@@ -1,5 +1,7 @@
 # Supabase 运维数据连接教程
 
+> 兼容性说明：Supabase PostgreSQL 现在是应用存储选项，不是当前 Community 控制台中的业务数据源。代码仍保留已有 Management API 映射以兼容旧部署。
+
 Dashloom 通过 Supabase Management API 导入项目状态和按日聚合的请求量。系统只保存 Auth、Realtime、REST、Storage、总 API 请求数，以及 `1`/`0` 项目健康信号；不会读取业务表、Auth 用户、日志、API Key、项目 Secret、SQL、请求路径或请求内容。
 
 ## 创建最小权限凭据

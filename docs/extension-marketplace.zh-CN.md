@@ -12,7 +12,7 @@
 - Cloudflare 可靠性监控；
 - 代理商客户经营简报。
 
-连接器目录覆盖 Cloudflare、Google、收入渠道、交付运维、Custom REST、鉴权数据接入和 Connector SDK。连接器凭证仍然只在服务端使用，并严格限定在所属工作空间。
+连接器目录覆盖当前内置的 Google、Bing、D1 业务数据、收入渠道、Custom REST、鉴权数据接入和 Connector SDK。部署平台和应用存储后端不会被列为业务数据源。连接器凭证仍然只在服务端使用，并严格限定在所属工作空间。
 
 ## 安装与信任边界
 
