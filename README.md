@@ -21,9 +21,33 @@ Dashloom Community normalizes operational signals, calculates deterministic metr
 - English and Simplified Chinese dashboard navigation, workspace-level locale preferences, and focused tabbed workflows.
 - Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable evidence export.
 
-Cloudflare Workers, Vercel, AWS, D1 application storage, and Supabase PostgreSQL are deployment or storage choices—not business data sources. The Dashboard catalog only lists systems that provide product, acquisition, search, revenue, or explicitly imported business evidence.
-
 Dashloom Community is a standalone open-source product. It has no source, package, runtime, database, deployment, Git, or build dependency on the private Dashloom Cloud repository.
+
+## Deployment methods and data sources are separate concerns
+
+Dashloom Community runs on infrastructure you control. Choose a deployment target and application database first; after signing in, connect only the business sources whose evidence you need. Deploying on a platform does not automatically make that platform a Dashloom data source.
+
+### Deployment paths
+
+| Path | Application runtime | Application database |
+| --- | --- | --- |
+| Cloudflare-native | Vinext on Cloudflare Workers | Native Cloudflare D1 binding |
+| Vercel | Next.js on Node.js | Cloudflare Remote D1 or Supabase PostgreSQL |
+| AWS | Next.js on Node.js, including AWS Amplify Hosting | Cloudflare Remote D1 or Supabase PostgreSQL |
+
+### Open-source technology stack
+
+| Area | Technologies | Role in Dashloom |
+| --- | --- | --- |
+| Deployment | Cloudflare Workers, Vercel, AWS | Hosts the Community application |
+| Storage | Cloudflare D1, Supabase PostgreSQL | Stores authentication, workspace configuration, normalized evidence, Agent state, reports, schedules, and audit history |
+| Application | Next.js, React, Node.js | Provides the server runtime and product interface |
+| Development | TypeScript, Tailwind CSS | Provides typed application code and the UI styling system |
+| Optional Cloudflare analytics | Cloudflare R2 | Supplies bounded operational metrics through the retained compatibility connector; it is not an application storage backend |
+
+The Dashboard business-source catalog covers Google Analytics, Google Search Console, Bing Webmaster Tools, Cloudflare D1 business data, Stripe, Lemon Squeezy, Creem, Polar, Paddle, and custom ingestion. Deployment platforms and application databases remain separate from this catalog.
+
+See the [Vercel and AWS deployment guide](docs/deployment-next.md) and [Cloudflare deployment guide](docs/cloudflare-setup.md) for setup details.
 
 ## Product tour
 

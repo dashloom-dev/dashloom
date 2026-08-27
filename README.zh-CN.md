@@ -21,9 +21,33 @@ Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent �
 - 中英文控制台导航、工作空间级语言偏好，以及按任务分组的标签页工作流。
 - Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移证据导出。
 
-Cloudflare Workers、Vercel、AWS、作为应用存储的 D1 和 Supabase PostgreSQL 都是部署或存储选项，不是业务数据源。控制台数据源目录只展示产品、获客、搜索、收入或明确导入的业务证据。
-
 Dashloom Community 是独立的开源产品，与私有 Dashloom Cloud 仓库不存在源码、Package、运行时、数据库、部署、Git 或构建依赖。
+
+## 部署方式与数据源是两类概念
+
+Dashloom Community 运行在你控制的基础设施中。先选择部署目标和应用数据库，登录后再按实际需要连接业务数据源。部署到某个平台，并不会自动把该平台变成 Dashloom 数据源。
+
+### 部署路径
+
+| 路径 | 应用运行时 | 应用数据库 |
+| --- | --- | --- |
+| Cloudflare 原生 | Vinext 运行于 Cloudflare Workers | 原生 Cloudflare D1 Binding |
+| Vercel | Next.js 运行于 Node.js | Cloudflare Remote D1 或 Supabase PostgreSQL |
+| AWS | Next.js 运行于 Node.js，包括 AWS Amplify Hosting | Cloudflare Remote D1 或 Supabase PostgreSQL |
+
+### 开源技术栈
+
+| 分类 | 技术 | 在 Dashloom 中的作用 |
+| --- | --- | --- |
+| 部署 | Cloudflare Workers、Vercel、AWS | 承载 Community 应用 |
+| 存储 | Cloudflare D1、Supabase PostgreSQL | 保存认证、工作空间配置、标准化证据、Agent 状态、报告、计划和审计历史 |
+| 应用 | Next.js、React、Node.js | 提供服务端运行时和产品界面 |
+| 开发 | TypeScript、Tailwind CSS | 提供类型安全的应用代码和界面样式系统 |
+| 可选 Cloudflare 分析 | Cloudflare R2 | 通过保留的兼容连接器提供有界运维指标，不作为应用存储后端 |
+
+控制台业务数据源目录包括 Google Analytics、Google Search Console、Bing Webmaster Tools、Cloudflare D1 业务数据、Stripe、Lemon Squeezy、Creem、Polar、Paddle 和自定义数据接入。部署平台和应用数据库与此目录保持分离。
+
+配置方式见 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)及 [Cloudflare 部署指南](docs/cloudflare-setup.zh-CN.md)。
 
 ## 产品功能
 
