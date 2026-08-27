@@ -61,7 +61,7 @@ Dashloom Community runs on infrastructure you control. Choose a deployment targe
 
 The Dashboard business-source catalog covers Google Analytics, Google Search Console, Bing Webmaster Tools, Cloudflare D1 business data, Stripe, Lemon Squeezy, Creem, Polar, Paddle, and custom ingestion. Deployment platforms and application databases remain separate from this catalog.
 
-See the [Vercel and AWS deployment guide](docs/deployment-next.md) and [Cloudflare deployment guide](docs/cloudflare-setup.md) for setup details.
+See the [Cloudflare deployment guide](docs/deployment-cloudflare.md) and [Vercel and AWS deployment guide](docs/deployment-next.md) for setup details.
 
 ## Product tour
 
@@ -242,6 +242,8 @@ Connector and model keys are entered through authenticated product forms. Do not
 
 ## Production deployment on Cloudflare
 
+For a complete step-by-step setup, including database creation, language selection, secrets, remote migration verification, deployment, rollback, and troubleshooting, see the [Cloudflare deployment guide](docs/deployment-cloudflare.md).
+
 1. Create a D1 database and replace the placeholder database name and ID in `wrangler.jsonc`. Set `DASHLOOM_DEFAULT_LOCALE` under `vars` to `en` or `zh-CN`.
 2. Configure production secrets with `npx wrangler secret put <NAME>`; never copy local secrets into source control.
 3. Apply migrations to the intended remote database:
@@ -300,6 +302,7 @@ npm run eval:agent
 ## Documentation
 
 - [Architecture and security boundaries](docs/architecture.md)
+- [Cloudflare deployment](docs/deployment-cloudflare.md)
 - [Vercel and AWS deployment](docs/deployment-next.md)
 - [Backup and recovery](docs/backup-and-recovery.md)
 - [First-value path](docs/first-value-path.md)
