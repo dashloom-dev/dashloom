@@ -12,6 +12,7 @@ Cloudflare Workers, Vercel, and AWS are deployment targets. They are not busines
 
 Copy `node-runtime.env.example` into the environment-variable settings for the selected platform. Always configure the authentication, credential-encryption, and cron secrets. Then choose exactly one storage backend:
 
+- Language: set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN`. It selects the default authentication and recovery language and the locale assigned to new workspaces. Workspace owners can change their locale later; changing the deployment value does not overwrite existing workspaces.
 - D1: set `DASHLOOM_DATABASE=d1` and configure the three `CLOUDFLARE_*` fields with a dedicated token scoped to the intended database.
 - Supabase: set `DASHLOOM_DATABASE=supabase` and configure `SUPABASE_DATABASE_URL`. Prefer the Supabase transaction pooler URL for serverless hosting. TLS is required by default and prepared statements are disabled for pooler compatibility.
 

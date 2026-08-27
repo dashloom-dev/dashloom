@@ -228,6 +228,7 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 | `AUTH_EMAIL_WEBHOOK_URL` | 使用邮件时 | 发送验证及密码重置邮件的 HTTPS 接口。 |
 | `AUTH_EMAIL_WEBHOOK_SECRET` | 使用邮件时 | 发送给邮件中继的认证 Secret。 |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | 可选 | 生产邮件配置完成后设为 `true`。 |
+| `DASHLOOM_DEFAULT_LOCALE` | 可选 | 登录、找回邮件和新工作空间使用的部署默认语言。可设为 `en`（默认）或 `zh-CN`；用户之后仍可修改工作空间语言。 |
 | `NEXT_PUBLIC_APP_URL` | 可选 | 公开且非 Secret 的 Origin 覆盖，配置在 `.env`。 |
 | `DASHLOOM_DATABASE` | Node.js 部署 | 在构建和运行时选择 `d1` 或 `supabase`。 |
 | `CLOUDFLARE_ACCOUNT_ID` | Node.js + D1 | 应用 D1 数据库所属的 Cloudflare Account。 |
@@ -241,7 +242,7 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 
 ## 部署到 Cloudflare
 
-1. 创建 D1 数据库，并替换 `wrangler.jsonc` 中的占位数据库名称与 ID。
+1. 创建 D1 数据库，并替换 `wrangler.jsonc` 中的占位数据库名称与 ID；同时在 `vars` 中把 `DASHLOOM_DEFAULT_LOCALE` 设为 `en` 或 `zh-CN`。
 2. 使用 `npx wrangler secret put <NAME>` 配置生产 Secret；不要把本地 Secret 写入源码。
 3. 把迁移应用到目标远程数据库：
 
@@ -266,6 +267,8 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 ## 部署到 Vercel 或 AWS
 
 Node.js 运行时支持两套完整存储路径：通过 Cloudflare 鉴权 HTTP API 使用 Remote D1，或通过连接池适配器使用 Supabase PostgreSQL。Supabase 路径以同一套 38 表应用模型保存认证、工作空间配置、标准化证据、Agent 状态、报告、计划和审计历史。
+
+构建前，在 Vercel 或 AWS 环境中设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。该变量控制初始登录语言、认证邮件语言，以及新创建工作空间的默认语言；已有工作空间偏好不会被覆盖。
 
 后端选择、构建命令、调度器接入、连接池、Migration 与核验方式见 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)。构建成功不代表远程数据库已经完成迁移。
 

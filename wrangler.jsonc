@@ -12,6 +12,9 @@
       "migrations_dir": "./drizzle"
     }
   ],
+  "vars": {
+    "DASHLOOM_DEFAULT_LOCALE": "en"
+  },
   "observability": {
     "enabled": true
   },

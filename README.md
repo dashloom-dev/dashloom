@@ -228,6 +228,7 @@ An Agent run freezes the evidence bundle used for the answer. Findings must cite
 | `AUTH_EMAIL_WEBHOOK_URL` | For email delivery | HTTPS endpoint for verification and password-reset mail. |
 | `AUTH_EMAIL_WEBHOOK_SECRET` | For email delivery | Authentication secret sent to the email relay. |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | Optional | Set to `true` when production email delivery is configured. |
+| `DASHLOOM_DEFAULT_LOCALE` | Optional | Deployment default for authentication, recovery emails, and new workspaces. Use `en` (default) or `zh-CN`; users can still change their workspace language later. |
 | `NEXT_PUBLIC_APP_URL` | Optional | Public, non-secret origin override; belongs in `.env`. |
 | `DASHLOOM_DATABASE` | Node deployment | Selects `d1` or `supabase` at build and runtime. |
 | `CLOUDFLARE_ACCOUNT_ID` | Node + D1 | Cloudflare account that owns the application D1 database. |
@@ -241,7 +242,7 @@ Connector and model keys are entered through authenticated product forms. Do not
 
 ## Production deployment on Cloudflare
 
-1. Create a D1 database and replace the placeholder database name and ID in `wrangler.jsonc`.
+1. Create a D1 database and replace the placeholder database name and ID in `wrangler.jsonc`. Set `DASHLOOM_DEFAULT_LOCALE` under `vars` to `en` or `zh-CN`.
 2. Configure production secrets with `npx wrangler secret put <NAME>`; never copy local secrets into source control.
 3. Apply migrations to the intended remote database:
 
@@ -266,6 +267,8 @@ A migration file existing in the repository is not proof that production was mig
 ## Production deployment on Vercel or AWS
 
 The Node.js runtime supports two complete storage paths: Remote D1 through Cloudflare's authenticated HTTP API, or Supabase PostgreSQL through the pooled PostgreSQL adapter. The Supabase path stores authentication, workspace configuration, normalized evidence, Agent state, reports, schedules, and audit history in the same 38-table application model.
+
+Set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN` in the Vercel or AWS environment before building. It controls the initial authentication language, authentication email language, and locale assigned to newly created workspaces. Existing workspace preferences remain unchanged.
 
 See the [Vercel and AWS deployment guide](docs/deployment-next.md) for backend selection, build commands, scheduler integration, pooler settings, migrations, and verification. A successful build does not prove that a remote database was migrated.
 
