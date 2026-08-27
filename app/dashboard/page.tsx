@@ -9,12 +9,13 @@ import { calculateProductHealth } from '@/lib/product-health';
 import { buildActivationProgress, buildFirstValueGuide } from '@/lib/activation-progress';
 import { evaluateProductGoals } from '@/lib/product-goals';
 import Link from 'next/link';
+import { getDeploymentLocale } from '@/lib/deployment-locale';
 
 export default async function DashboardOverview() {
   const { user } = await requireServerSession();
   const workspace = await getPrimaryWorkspace(user.id);
   if (!workspace) return <div className="empty-state"><h1>Workspace setup needs attention</h1><p>Your account exists, but no workspace membership was found.</p></div>;
-  const zh = workspace.locale === 'zh';
+  const zh = getDeploymentLocale() === 'zh';
 
   const db = getDb();
   const [productRows, metricRows, recentSyncs, healthPoints, healthDates, latestAnalysisRows, openActions, sourceMappings, connectedProviders, actedOnFindings, enabledSchedules, activeGoalRows, goalMetricRows] = await Promise.all([
