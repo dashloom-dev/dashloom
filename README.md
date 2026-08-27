@@ -16,7 +16,7 @@ Dashloom Community normalizes operational signals, calculates deterministic metr
 - Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Cloudflare Operations, and Agency Client.
 - BYOK Agent conversations, Executive Briefs, model comparison, task history, and evidence citations.
 - Signal Radar for deterministic period comparisons and cross-signal hypotheses without causal overclaiming.
-- Cloudflare, Google Analytics/Search Console, Stripe revenue, Lemon Squeezy, Creem, Polar, Paddle, Supabase, GitHub, Vercel, D1, and Custom REST connectors.
+- Cloudflare, Google Analytics/Search Console, Bing Webmaster, Stripe revenue, Lemon Squeezy, Creem, Polar, Paddle, Supabase, GitHub, Vercel, D1, and Custom REST connectors.
 - Manual imports, open ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
 - Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable evidence export.
 
@@ -237,6 +237,7 @@ npm run eval:agent
 - [Architecture and security boundaries](docs/architecture.md)
 - [First-value path](docs/first-value-path.md)
 - [Connector account lifecycle](docs/connector-account-lifecycle.md)
+- [Bing Webmaster setup](docs/bing-webmaster-setup.md)
 - [Automatic synchronization](docs/automatic-sync-and-retention.md)
 - [Automated reports](docs/automated-reports.md)
 - [Agent Executive Briefs](docs/agent-executive-briefs.md)

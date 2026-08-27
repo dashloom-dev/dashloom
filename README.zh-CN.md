@@ -16,7 +16,7 @@ Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent �
 - 独立开发者、SaaS 收入、SEO 增长、Cloudflare 运维和客户报告五类智能视图。
 - BYOK Agent 对话、Executive Brief、模型对比、任务历史和证据引用。
 - 使用确定性周期比较发现变化的信号雷达；关联信号不会被表述为因果关系。
-- Cloudflare、Google Analytics/Search Console、Stripe 收入、Lemon Squeezy、Creem、Polar、Paddle、Supabase、GitHub、Vercel、D1 和 Custom REST 连接器。
+- Cloudflare、Google Analytics/Search Console、Bing Webmaster、Stripe 收入、Lemon Squeezy、Creem、Polar、Paddle、Supabase、GitHub、Vercel、D1 和 Custom REST 连接器。
 - 手动导入、开放摄取 API Key、计算指标、定时同步和本地报告。
 - Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移证据导出。
 
@@ -237,6 +237,7 @@ npm run eval:agent
 - [架构与安全边界](docs/architecture.md)
 - [首次价值路径](docs/first-value-path.zh-CN.md)
 - [连接器账号生命周期](docs/connector-account-lifecycle.zh-CN.md)
+- [Bing Webmaster 接入](docs/bing-webmaster-setup.zh-CN.md)
 - [自动同步](docs/automatic-sync-and-retention.zh-CN.md)
 - [自动报告](docs/automated-reports.zh-CN.md)
 - [Agent Executive Brief](docs/agent-executive-briefs.zh-CN.md)

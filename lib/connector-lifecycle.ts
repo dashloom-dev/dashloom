@@ -10,7 +10,7 @@ export type ConnectorLifecycleMapping = { connectorAccountId: string; enabled: b
 export type ConnectorLifecycleRun = { connectorAccountId: string | null; status: 'queued' | 'running' | 'success' | 'partial' | 'error'; errorCode: string | null; createdAt: string };
 
 const providerNames: Record<string, string> = {
-  cloudflare: 'Cloudflare', cloudflare_pages: 'Cloudflare Pages', cloudflare_queues: 'Cloudflare Queues', google: 'Google', d1: 'Cloudflare D1', stripe: 'Stripe', lemonsqueezy: 'Lemon Squeezy', creem: 'Creem', polar: 'Polar', paddle: 'Paddle Billing', supabase: 'Supabase', github: 'GitHub', vercel: 'Vercel', custom: 'Custom REST',
+  cloudflare: 'Cloudflare', cloudflare_pages: 'Cloudflare Pages', cloudflare_queues: 'Cloudflare Queues', google: 'Google', bing: 'Bing Webmaster', d1: 'Cloudflare D1', stripe: 'Stripe', lemonsqueezy: 'Lemon Squeezy', creem: 'Creem', polar: 'Polar', paddle: 'Paddle Billing', supabase: 'Supabase', github: 'GitHub', vercel: 'Vercel', custom: 'Custom REST',
 };
 
 export function connectorProviderName(provider: string) {
@@ -54,6 +54,6 @@ export function buildConnectorAccountViews(accounts: ConnectorLifecycleAccount[]
 }
 
 function connectorRepairChecks(provider: string, mappingCount: number) {
-  const credential = provider === 'google' ? 'Reconnect Google OAuth and approve the requested Analytics or Search Console read scopes.' : provider.startsWith('cloudflare') || provider === 'd1' ? 'Confirm the Cloudflare token can read the selected account and resource.' : ['stripe', 'lemonsqueezy', 'creem', 'polar', 'paddle'].includes(provider) ? 'Rotate or re-enter a restricted read credential for the selected merchant account.' : 'Re-enter the provider credential and verify its read permissions.';
+  const credential = provider === 'google' ? 'Reconnect Google OAuth and approve the requested Analytics or Search Console read scopes.' : provider === 'bing' ? 'Regenerate or re-enter the user-level Bing Webmaster API key and confirm the site remains verified.' : provider.startsWith('cloudflare') || provider === 'd1' ? 'Confirm the Cloudflare token can read the selected account and resource.' : ['stripe', 'lemonsqueezy', 'creem', 'polar', 'paddle'].includes(provider) ? 'Rotate or re-enter a restricted read credential for the selected merchant account.' : 'Re-enter the provider credential and verify its read permissions.';
   return [credential, mappingCount ? 'Confirm the mapped resource still exists and remains visible to that credential.' : 'Create an active mapping from this account to a product.', 'Run a manual synchronization and confirm that new evidence is written.'];
 }
