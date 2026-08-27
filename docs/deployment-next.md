@@ -8,6 +8,17 @@ Dashloom Community has three real runtime paths:
 
 Cloudflare Workers, Vercel, and AWS are deployment targets. They are not business data sources and do not appear in the Dashboard data-source catalog.
 
+For the native Worker path, use the [Cloudflare deployment guide](deployment-cloudflare.md).
+
+## Prerequisites
+
+- Node.js 22.13 or newer and npm 10 or newer
+- A Vercel project, AWS Amplify Hosting app, or another compatible Node.js host
+- One fresh Community-only Remote D1 database or Supabase project
+- A public HTTPS origin for authentication callbacks
+
+Run `npm ci` and `npm test` locally before connecting the repository to the host.
+
 ## Required environment variables
 
 Copy `node-runtime.env.example` into the environment-variable settings for the selected platform. Always configure the authentication, credential-encryption, and cron secrets. Then choose exactly one storage backend:
@@ -39,7 +50,19 @@ Send `Authorization: Bearer <REPORT_CRON_SECRET>` and keep the same independent 
 
 Apply the migration set for the chosen backend before starting the deployment. A successful application build does not apply production schema changes.
 
-For D1, use Wrangler and verify the intended remote database has no pending migration. For Supabase, copy the database connection string from the Supabase database settings, set `SUPABASE_DATABASE_URL` only in your secure shell or CI secret store, then run:
+For D1, first confirm the production database name and UUID. The returned UUID must match `CLOUDFLARE_D1_DATABASE_ID`. List the migration state, apply the repository migrations, list again, and query critical tables in that same database:
+
+```bash
+npx wrangler d1 info dashloom-production --json
+npx wrangler d1 migrations list dashloom-production --remote
+npx wrangler d1 migrations apply dashloom-production --remote
+npx wrangler d1 migrations list dashloom-production --remote
+npx wrangler d1 execute dashloom-production --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('workspaces','workspace_members','products','metric_points','analysis_runs','reports') ORDER BY name;"
+```
+
+The final migration list must show no pending entry and the critical tables must exist. A migration file in the repository is not proof that production was migrated.
+
+For Supabase, copy the database connection string from the intended project's database settings, set `SUPABASE_DATABASE_URL` only in your secure shell or CI secret store, then run:
 
 ```bash
 npm run db:migrate:supabase
@@ -65,3 +88,13 @@ npm run build:supabase
 ```
 
 Then verify sign-in, workspace language switching, one connector synchronization, one Agent run, and both authenticated cron endpoints against the selected backend.
+
+## Production checklist and rollback
+
+1. Confirm `BETTER_AUTH_URL` matches the final HTTPS origin and test sign-in and recovery.
+2. Create a workspace and verify that the selected `DASHLOOM_DEFAULT_LOCALE` is applied only to new workspaces.
+3. Run one connector synchronization and confirm evidence is stored in the selected backend.
+4. Call both Cron endpoints with the production `REPORT_CRON_SECRET` and inspect the automation ledger.
+5. Test export and one cited Agent run before announcing availability.
+
+Back up the selected database before a risky migration; see the [backup and recovery guide](backup-and-recovery.md). If application verification fails, roll the hosting deployment back to its previous version. Do not manually delete tables or edit migration history. Database rollback requires a tested backup or provider recovery mechanism, followed by migration and schema verification.

@@ -8,6 +8,17 @@ Dashloom Community 现在有三条真实的运行路径：
 
 Cloudflare Workers、Vercel 和 AWS 是部署目标，不是业务数据源，因此不会出现在 Dashboard 的数据源目录中。
 
+如需使用原生 Worker 路径，请阅读 [Cloudflare 部署指南](deployment-cloudflare.zh-CN.md)。
+
+## 准备条件
+
+- Node.js 22.13 或更高版本、npm 10 或更高版本
+- Vercel 项目、AWS Amplify Hosting 应用或其他兼容 Node.js 的托管环境
+- 一个仅供 Community 使用的新 Remote D1 数据库或 Supabase 项目
+- 用于认证回调的公开 HTTPS Origin
+
+把仓库连接到托管平台前，先在本地运行 `npm ci` 和 `npm test`。
+
 ## 必需的环境变量
 
 把 `node-runtime.env.example` 中的变量配置到目标平台，并始终配置认证、凭据加密和 Cron Secret。然后只选择一种存储后端：
@@ -39,7 +50,19 @@ Cloudflare Workers 会按照 `wrangler.jsonc` 每 15 分钟执行一次 `worker.
 
 启动部署前，必须应用所选后端对应的 Migration；应用构建成功不代表生产数据库结构已经完成迁移。
 
-D1 使用 Wrangler，并验证目标远程数据库没有待应用 Migration。Supabase 则从数据库设置复制连接字符串，只在安全 Shell 或 CI Secret 中设置 `SUPABASE_DATABASE_URL`，然后运行：
+使用 D1 时，先确认生产数据库名称与 UUID，返回的 UUID 必须与 `CLOUDFLARE_D1_DATABASE_ID` 一致。检查 Migration 状态、应用仓库 Migration、重新检查，并查询同一个数据库中的关键表：
+
+```bash
+npx wrangler d1 info dashloom-production --json
+npx wrangler d1 migrations list dashloom-production --remote
+npx wrangler d1 migrations apply dashloom-production --remote
+npx wrangler d1 migrations list dashloom-production --remote
+npx wrangler d1 execute dashloom-production --remote --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('workspaces','workspace_members','products','metric_points','analysis_runs','reports') ORDER BY name;"
+```
+
+最终 Migration 列表必须没有待执行项，且关键表必须存在。仓库中存在 Migration 文件不代表生产数据库已经完成迁移。
+
+使用 Supabase 时，从目标项目的数据库设置复制连接字符串，只在安全 Shell 或 CI Secret 中设置 `SUPABASE_DATABASE_URL`，然后运行：
 
 ```bash
 npm run db:migrate:supabase
@@ -65,3 +88,13 @@ npm run build:supabase
 ```
 
 随后针对所选后端验证登录、工作空间语言切换、一次连接器同步、一次 Agent 运行，以及两个带认证的 Cron 接口。
+
+## 生产核验与回滚
+
+1. 确认 `BETTER_AUTH_URL` 与最终 HTTPS Origin 一致，并测试登录与找回流程。
+2. 创建工作空间，确认所选 `DASHLOOM_DEFAULT_LOCALE` 只应用于新工作空间。
+3. 完成一次连接器同步，并确认证据写入所选后端。
+4. 使用生产 `REPORT_CRON_SECRET` 调用两个 Cron 接口，并检查自动化台账。
+5. 对外宣布可用前测试导出和一次带证据引用的 Agent 运行。
+
+执行高风险 Migration 前先备份所选数据库，具体方式见[备份与恢复指南](backup-and-recovery.zh-CN.md)。如果应用核验失败，把托管部署回滚到上一版本。不要手动删除表或修改 Migration 历史。数据库回滚必须使用经过测试的备份或 Provider 恢复机制，并在恢复后重新执行 Migration 与 Schema 核验。

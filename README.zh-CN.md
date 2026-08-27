@@ -61,7 +61,7 @@ Dashloom Community 运行在你控制的基础设施中。先选择部署目标�
 
 控制台业务数据源目录包括 Google Analytics、Google Search Console、Bing Webmaster Tools、Cloudflare D1 业务数据、Stripe、Lemon Squeezy、Creem、Polar、Paddle 和自定义数据接入。部署平台和应用数据库与此目录保持分离。
 
-配置方式见 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)及 [Cloudflare 部署指南](docs/cloudflare-setup.zh-CN.md)。
+配置方式见 [Cloudflare 部署指南](docs/deployment-cloudflare.zh-CN.md)及 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)。
 
 ## 产品功能
 
@@ -242,6 +242,8 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 
 ## 部署到 Cloudflare
 
+完整的数据库创建、语言选择、Secret、远程 Migration 核验、发布、回滚和故障处理步骤见 [Cloudflare 部署指南](docs/deployment-cloudflare.zh-CN.md)。
+
 1. 创建 D1 数据库，并替换 `wrangler.jsonc` 中的占位数据库名称与 ID；同时在 `vars` 中把 `DASHLOOM_DEFAULT_LOCALE` 设为 `en` 或 `zh-CN`。
 2. 使用 `npx wrangler secret put <NAME>` 配置生产 Secret；不要把本地 Secret 写入源码。
 3. 把迁移应用到目标远程数据库：
@@ -300,6 +302,7 @@ npm run eval:agent
 ## 延伸文档
 
 - [架构与安全边界](docs/architecture.zh-CN.md)
+- [Cloudflare 部署](docs/deployment-cloudflare.zh-CN.md)
 - [Vercel 和 AWS 部署](docs/deployment-next.zh-CN.md)
 - [备份与恢复](docs/backup-and-recovery.zh-CN.md)
 - [首次价值路径](docs/first-value-path.zh-CN.md)
