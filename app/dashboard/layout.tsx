@@ -31,7 +31,7 @@ const intelligenceViews = [
   ['/dashboard/views/indie_hacker', 'Indie Hacker', '独立开发者'],
   ['/dashboard/views/saas_revenue', 'SaaS Revenue', 'SaaS 收入'],
   ['/dashboard/views/seo_growth', 'SEO Growth', 'SEO 增长'],
-  ['/dashboard/views/cloudflare_operations', 'Cloudflare Ops', 'Cloudflare 运维'],
+  ['/dashboard/views/cloudflare_operations', 'Infrastructure Ops', '基础设施运维'],
   ['/dashboard/views/agency_client', 'Agency Client', 'Agency 客户'],
 ] as const;
 
