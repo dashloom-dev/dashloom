@@ -13,19 +13,19 @@ Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent �
 ## 包含哪些能力
 
 - 以产品为范围隔离证据、目标、竞品、看板、行动和 Growth Mission。
-- 独立开发者、SaaS 收入、SEO 增长、Cloudflare 运维和客户报告五类智能视图。
+- 独立开发者、SaaS 收入、SEO 增长、基础设施运维和客户报告五类智能视图。
 - BYOK Agent 对话、Executive Brief、模型对比、任务历史和证据引用。
 - 使用确定性周期比较发现变化的信号雷达；关联信号不会被表述为因果关系。
-- Google Analytics/Search Console、Bing Webmaster、Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle 和 Custom REST 连接器。
+- Google Analytics/Search Console、Bing Webmaster、Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle、Cloudflare Workers/R2/Pages/Queues、GitHub、Vercel 和 Custom REST 连接器。
 - 手动导入、开放摄取 API Key、计算指标、定时同步和本地报告。
-- 中英文控制台导航、工作空间级语言偏好，以及按任务分组的标签页工作流。
+- 部署级中英文界面选择，以及按任务分组的标签页工作流。
 - Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移证据导出。
 
 Dashloom Community 是独立的开源产品，与私有 Dashloom Cloud 仓库不存在源码、Package、运行时、数据库、部署、Git 或构建依赖。
 
 ## 部署方式与数据源是两类概念
 
-Dashloom Community 运行在你控制的基础设施中。先选择部署目标和应用数据库，登录后再按实际需要连接业务数据源。部署到某个平台，并不会自动把该平台变成 Dashloom 数据源。
+Dashloom Community 运行在你控制的基础设施中。先选择部署目标和应用数据库，登录后再按实际需要连接证据数据源。部署到某个平台不会自动授权其成为 Dashloom 数据源，但可以使用独立、限定范围的只读凭据连接 Cloudflare、GitHub 和 Vercel。
 
 ### 部署路径
 
@@ -57,9 +57,9 @@ Dashloom Community 运行在你控制的基础设施中。先选择部署目标�
 | 存储 | Cloudflare D1、Supabase PostgreSQL | 保存认证、工作空间配置、标准化证据、Agent 状态、报告、计划和审计历史 |
 | 应用 | Next.js、React、Node.js | 提供服务端运行时和产品界面 |
 | 开发 | TypeScript、Tailwind CSS | 提供类型安全的应用代码和界面样式系统 |
-| 可选 Cloudflare 分析 | Cloudflare R2 | 通过保留的兼容连接器提供有界运维指标，不作为应用存储后端 |
+| 基础设施证据 | Cloudflare Workers、R2、Pages、Queues；GitHub；Vercel | 通过独立授权的只读连接器提供有界的运行时、存储、队列、仓库和部署指标 |
 
-控制台业务数据源目录包括 Google Analytics、Google Search Console、Bing Webmaster Tools、Cloudflare D1 业务数据、Stripe、Lemon Squeezy、Creem、Polar、Paddle 和自定义数据接入。部署平台和应用数据库与此目录保持分离。
+数据源目录将业务与增长证据和**基础设施与交付**页签分开；后者包括 Cloudflare Workers、R2、Pages、Queues、GitHub 和 Vercel。同一个 Provider 可以既是部署目标，又是单独授权的证据源，但两种角色不会隐式共享凭据。
 
 配置方式见 [Cloudflare 部署指南](docs/deployment-cloudflare.zh-CN.md)及 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)。
 
@@ -77,9 +77,9 @@ Dashloom 先在相同产品、来源、指标、币种和维度内进行确定�
 
 ![使用虚构数据的 Dashloom 产品组合](docs/images/readme/products-zh.png)
 
-### 双语、聚焦任务的工作空间
+### 部署级语言、聚焦任务的工作空间
 
-可以从控制台账号菜单或**设置 → 工作空间**选择 English 或简体中文。语言偏好保存在工作空间中，并应用到导航和核心产品页面。产品、数据源、Agent 分析与设置使用标签页组织长流程，但不会改变授权或数据边界。
+部署时通过 `DASHLOOM_DEFAULT_LOCALE` 选择 English 或简体中文。Community 整个部署使用同一种语言，不提供 Cloud 版本的语言路由或工作空间级切换。产品、数据源、Agent 分析与设置使用标签页组织长流程，但不会改变授权或数据边界。
 
 ## 架构
 
@@ -184,6 +184,7 @@ npm run dev
 进入**数据源**，选择一种方式：
 
 - 使用最小权限凭证连接 Google Analytics/Search Console、Bing Webmaster 或受支持的收入 Provider；
+- 在**基础设施与交付**中使用独立只读凭据连接 Cloudflare Workers、R2、Pages、Queues、GitHub 或 Vercel；
 - 配置只读的 D1 聚合查询；
 - 手动导入标准化指标；
 - 为 TypeScript SDK 或 Connector Worker 创建限定范围的摄取 Key；
@@ -228,7 +229,7 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 | `AUTH_EMAIL_WEBHOOK_URL` | 使用邮件时 | 发送验证及密码重置邮件的 HTTPS 接口。 |
 | `AUTH_EMAIL_WEBHOOK_SECRET` | 使用邮件时 | 发送给邮件中继的认证 Secret。 |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | 可选 | 生产邮件配置完成后设为 `true`。 |
-| `DASHLOOM_DEFAULT_LOCALE` | 可选 | 登录、找回邮件和新工作空间使用的部署默认语言。可设为 `en`（默认）或 `zh-CN`；用户之后仍可修改工作空间语言。 |
+| `DASHLOOM_DEFAULT_LOCALE` | 可选 | 登录、找回邮件、导航和产品页面使用的部署级语言。可设为 `en`（默认）或 `zh-CN`；Community 不提供应用内语言切换。 |
 | `NEXT_PUBLIC_APP_URL` | 可选 | 公开且非 Secret 的 Origin 覆盖，配置在 `.env`。 |
 | `DASHLOOM_DATABASE` | Node.js 部署 | 在构建和运行时选择 `d1` 或 `supabase`。 |
 | `CLOUDFLARE_ACCOUNT_ID` | Node.js + D1 | 应用 D1 数据库所属的 Cloudflare Account。 |
@@ -270,7 +271,7 @@ Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订
 
 Node.js 运行时支持两套完整存储路径：通过 Cloudflare 鉴权 HTTP API 使用 Remote D1，或通过连接池适配器使用 Supabase PostgreSQL。Supabase 路径以同一套 38 表应用模型保存认证、工作空间配置、标准化证据、Agent 状态、报告、计划和审计历史。
 
-构建前，在 Vercel 或 AWS 环境中设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。该变量控制初始登录语言、认证邮件语言，以及新创建工作空间的默认语言；已有工作空间偏好不会被覆盖。
+构建前，在 Vercel 或 AWS 环境中设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。该变量控制整个 Community 部署的登录、邮件、导航和产品页面语言。
 
 后端选择、构建命令、调度器接入、连接池、Migration 与核验方式见 [Vercel 和 AWS 部署指南](docs/deployment-next.zh-CN.md)。构建成功不代表远程数据库已经完成迁移。
 

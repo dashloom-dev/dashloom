@@ -23,7 +23,7 @@ Cloudflare Workers、Vercel 和 AWS 是部署目标，不是业务数据源，�
 
 把 `node-runtime.env.example` 中的变量配置到目标平台，并始终配置认证、凭据加密和 Cron Secret。然后只选择一种存储后端：
 
-- 语言：设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。它决定登录与找回密码的默认语言，以及新工作空间的初始语言。工作空间 Owner 之后仍可切换语言；修改部署变量不会覆盖已有工作空间。
+- 语言：设置 `DASHLOOM_DEFAULT_LOCALE=en` 或 `DASHLOOM_DEFAULT_LOCALE=zh-CN`。它决定整个 Community 部署的登录、找回邮件、导航和产品页面语言。Community 不提供本地化 Dashboard 路由或应用内语言切换；如需修改部署语言，请调整该变量并重新构建。
 - D1：设置 `DASHLOOM_DATABASE=d1`，并使用只限定目标数据库的专用 Token 配置三个 `CLOUDFLARE_*` 变量。
 - Supabase：设置 `DASHLOOM_DATABASE=supabase` 和 `SUPABASE_DATABASE_URL`。Serverless 托管优先使用 Supabase Transaction Pooler 地址。系统默认强制 TLS，并关闭 Prepared Statement 以兼容连接池。
 
@@ -87,12 +87,12 @@ npm run build:next
 npm run build:supabase
 ```
 
-随后针对所选后端验证登录、工作空间语言切换、一次连接器同步、一次 Agent 运行，以及两个带认证的 Cron 接口。
+随后针对所选后端验证登录和 Dashboard 本地化、一次连接器同步、一次 Agent 运行，以及两个带认证的 Cron 接口。
 
 ## 生产核验与回滚
 
 1. 确认 `BETTER_AUTH_URL` 与最终 HTTPS Origin 一致，并测试登录与找回流程。
-2. 创建工作空间，确认所选 `DASHLOOM_DEFAULT_LOCALE` 只应用于新工作空间。
+2. 确认登录、导航和产品页面使用所选 `DASHLOOM_DEFAULT_LOCALE`。
 3. 完成一次连接器同步，并确认证据写入所选后端。
 4. 使用生产 `REPORT_CRON_SECRET` 调用两个 Cron 接口，并检查自动化台账。
 5. 对外宣布可用前测试导出和一次带证据引用的 Agent 运行。

@@ -56,7 +56,7 @@ Set the non-secret `DASHLOOM_DEFAULT_LOCALE` value under `vars` in `wrangler.jso
 }
 ```
 
-Use `en` for English or `zh-CN` for Simplified Chinese. This controls the initial authentication and recovery-email language and the locale assigned to newly created workspaces. Workspace owners can change their language later; changing this deployment value does not overwrite existing workspaces.
+Use `en` for English or `zh-CN` for Simplified Chinese. This controls authentication, recovery emails, navigation, and product pages for the whole Community deployment. Community does not expose localized dashboard routes or an in-app language switch; change this value and rebuild to change the deployment language.
 
 ## 3. Configure production secrets
 
@@ -119,7 +119,7 @@ The committed Cron trigger runs `worker.ts` every 15 minutes, so no separate sch
 Test against the deployed origin:
 
 1. Create or sign in to an account and verify the selected deployment language.
-2. Confirm a new workspace is created in that language and that workspace switching remains isolated.
+2. Confirm dashboard navigation and product pages use that language and workspace switching remains isolated.
 3. Add one product and run one connector synchronization.
 4. Add an OpenAI-compatible BYOK model and run one cited Agent analysis.
 5. Create a due synchronization or report schedule and confirm the Worker Cron records its execution.

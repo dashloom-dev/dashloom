@@ -22,6 +22,12 @@ import { ConnectorAccountManager } from './connector-account-manager';
 import { buildConnectorAccountViews } from '@/lib/connector-lifecycle';
 import { ProductIngestionWizard } from './product-ingestion-wizard';
 import { DashboardTabs } from '../dashboard-tabs';
+import { CloudflareForm } from './cloudflare-form';
+import { CloudflareR2Form } from './cloudflare-r2-form';
+import { CloudflarePagesForm } from './cloudflare-pages-form';
+import { CloudflareQueuesForm } from './cloudflare-queues-form';
+import { GitHubForm } from './github-form';
+import { VercelForm } from './vercel-form';
 
 const catalog = [
   ['google', 'Google Analytics & Search Console', 'Google Analytics 与 Search Console', 'Acquisition, engagement, queries, pages, positions, and clicks.', '获客、参与度、搜索词、页面、排名和点击。'],
@@ -32,6 +38,12 @@ const catalog = [
   ['creem', 'Creem revenue', 'Creem 收入', 'Paid transactions, gross revenue, refunds, and chargebacks with production/test isolation.', '在生产与测试环境隔离下读取支付交易、总收入、退款和拒付。'],
   ['polar', 'Polar revenue', 'Polar 收入', 'Net order revenue, refunds, and paid transactions with production/sandbox isolation.', '在生产与沙盒环境隔离下读取订单净收入、退款和支付交易。'],
   ['paddle', 'Paddle Billing revenue', 'Paddle Billing 收入', 'Completed revenue, approved refunds, chargebacks, and recurring transaction evidence.', '读取已完成收入、已批准退款、拒付和经常性交易证据。'],
+  ['cloudflare', 'Cloudflare Workers', 'Cloudflare Workers', 'Runtime requests, errors, CPU time, and status from an explicitly authorized Worker.', '从明确授权的 Worker 读取请求、错误、CPU 时间和运行状态。'],
+  ['cloudflare_r2', 'Cloudflare R2', 'Cloudflare R2', 'Bucket analytics and error evidence without reading objects or object names.', '读取存储桶分析与错误证据，不读取对象或对象名称。'],
+  ['cloudflare_pages', 'Cloudflare Pages', 'Cloudflare Pages', 'Deployment outcomes and delivery health without storing source code or build secrets.', '读取部署结果与交付健康度，不保存源代码或构建密钥。'],
+  ['cloudflare_queues', 'Cloudflare Queues', 'Cloudflare Queues', 'Backlog, oldest-message age, and paused state without reading message bodies.', '读取积压量、最旧消息时长和暂停状态，不读取消息正文。'],
+  ['github', 'GitHub', 'GitHub', 'Repository activity and health using metadata-only, read-only access.', '通过只读元数据权限读取仓库活动与健康度。'],
+  ['vercel', 'Vercel', 'Vercel', 'Project deployment summaries and delivery health from a scoped access token.', '通过限定范围的访问令牌读取项目部署摘要与交付健康度。'],
   ['custom', 'Custom REST and ingestion', '自定义 REST 与导入', 'Pull contract-versioned metrics over safe HTTPS or push them through the normalized ingestion API.', '通过安全 HTTPS 拉取带版本契约的指标，或通过标准化导入 API 推送。'],
 ] as const;
 
@@ -58,16 +70,25 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
     { id: 'polar', label: 'Polar', description: zh ? '订单与退款' : 'Orders & refunds', content: <div className="tab-section-stack">{title('POLAR', zh ? '连接开发者商户证据' : 'Connect developer-first merchant evidence')}<PolarForm products={productRows} /></div> },
     { id: 'paddle', label: 'Paddle', description: zh ? '交易与拒付' : 'Transactions & disputes', content: <div className="tab-section-stack">{title('PADDLE', zh ? '连接 Merchant of Record 交易证据' : 'Connect merchant-of-record transaction evidence')}<PaddleForm products={productRows} /></div> },
   ]} />;
+  const infrastructure = <DashboardTabs initialTab="workers" tabs={[
+    { id: 'workers', label: 'Cloudflare Workers', description: zh ? '运行时指标' : 'Runtime metrics', content: <div className="tab-section-stack">{title('CLOUDFLARE WORKERS', zh ? '连接 Worker 运行时证据' : 'Connect Worker runtime evidence')}<CloudflareForm products={productRows} /></div> },
+    { id: 'r2', label: 'Cloudflare R2', description: zh ? '存储分析' : 'Storage analytics', content: <div className="tab-section-stack">{title('CLOUDFLARE R2', zh ? '连接存储健康证据' : 'Connect storage health evidence')}<CloudflareR2Form products={productRows} /></div> },
+    { id: 'pages', label: 'Cloudflare Pages', description: zh ? '部署结果' : 'Deployment outcomes', content: <div className="tab-section-stack">{title('CLOUDFLARE PAGES', zh ? '连接 Pages 交付证据' : 'Connect Pages delivery evidence')}<CloudflarePagesForm products={productRows} /></div> },
+    { id: 'queues', label: 'Cloudflare Queues', description: zh ? '队列健康' : 'Queue health', content: <div className="tab-section-stack">{title('CLOUDFLARE QUEUES', zh ? '连接队列积压与投递状态' : 'Connect queue backlog and delivery state')}<CloudflareQueuesForm products={productRows} /></div> },
+    { id: 'github', label: 'GitHub', description: zh ? '代码交付信号' : 'Repository delivery', content: <div className="tab-section-stack">{title('GITHUB', zh ? '连接仓库活动与健康证据' : 'Connect repository activity and health')}<GitHubForm products={productRows} /></div> },
+    { id: 'vercel', label: 'Vercel', description: zh ? '部署健康' : 'Deployment health', content: <div className="tab-section-stack">{title('VERCEL', zh ? '连接项目部署与交付证据' : 'Connect project deployment and delivery evidence')}<VercelForm products={productRows} /></div> },
+  ]} />;
   const custom = <DashboardTabs initialTab="calculated" tabs={[
     { id: 'calculated', label: zh ? '计算指标' : 'Calculated metrics', description: zh ? '比例与 KPI' : 'Ratios & KPIs', content: <div className="tab-section-stack">{title(zh ? '计算指标' : 'CALCULATED METRICS', zh ? '创建确定性的比例和 KPI' : 'Turn normalized inputs into deterministic ratios and KPIs')}<CalculatedMetricForm definitions={definitions} canManage={canManage} /></div> },
     { id: 'competitors', label: zh ? '竞品情报' : 'Competitors', description: zh ? '可比证据' : 'Comparable evidence', content: <div className="tab-section-stack">{title(zh ? '竞品情报' : 'COMPETITOR INTELLIGENCE', zh ? '跟踪带来源的可比证据' : 'Track comparable evidence with provenance')}<CompetitorForm products={productRows} competitors={competitorRows} /></div> },
     { id: 'rest', label: 'Custom REST', description: zh ? '安全 JSON 端点' : 'Safe JSON endpoint', content: <div className="tab-section-stack">{title('CUSTOM REST', zh ? '从安全的 JSON 端点读取 KPI' : 'Pull product KPIs from a safe JSON endpoint')}<CustomRestForm products={productRows} connections={customAccounts} canManage={canManage} /></div> },
     { id: 'import', label: zh ? '开放导入' : 'Open ingestion', description: zh ? '标准化指标' : 'Normalized metrics', content: <div className="tab-section-stack">{title(zh ? '开放导入' : 'OPEN INGESTION', zh ? '立即导入标准化指标' : 'Import normalized metrics now')}<MetricImportForm products={productRows} /></div> },
   ]} />;
-  return <div className="app-page"><header className="app-page-head"><div><span>{zh ? '数据层' : 'DATA LAYER'}</span><h1>{zh ? '数据源' : 'Data sources'}</h1><p>{zh ? '这里只连接真实业务、获客、搜索和收入数据；Workers、Vercel、AWS 与技术框架属于部署配置，不是业务数据源。' : 'Connect real business, acquisition, search, and revenue data here; Workers, Vercel, AWS, and frameworks belong to deployment configuration, not business data sources.'}</p></div></header><DashboardTabs tabs={[
+  return <div className="app-page"><header className="app-page-head"><div><span>{zh ? '数据层' : 'DATA LAYER'}</span><h1>{zh ? '数据源' : 'Data sources'}</h1><p>{zh ? '连接业务、增长、收入以及基础设施与交付证据。部署到某个平台不会自动授权数据访问，每个连接器都需要单独的只读凭据。' : 'Connect business, growth, revenue, infrastructure, and delivery evidence. Deploying to a platform never grants data access automatically; every connector requires separate read-only authorization.'}</p></div></header><DashboardTabs tabs={[
     { id: 'overview', label: zh ? '概览与同步' : 'Overview & sync', description: zh ? '连接状态、导入与计划任务' : 'Status, ingestion, and schedules', content: overview },
     { id: 'business', label: zh ? '业务数据' : 'Business data', description: 'Cloudflare D1', content: business },
     { id: 'growth', label: zh ? '增长与收入' : 'Growth & revenue', description: zh ? '流量、搜索与支付平台' : 'Acquisition, search, and billing', content: growth },
+    { id: 'infrastructure', label: zh ? '基础设施与交付' : 'Infrastructure & delivery', description: zh ? '运行时、存储、队列、代码与部署' : 'Runtime, storage, queues, code, and deployments', content: infrastructure },
     { id: 'custom', label: zh ? '自定义与计算' : 'Custom & calculated', description: zh ? '计算指标、REST、竞品与导入' : 'Calculated metrics, REST, competitors, and ingestion', content: custom },
   ]} /></div>;
 }

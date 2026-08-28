@@ -13,19 +13,19 @@ Dashloom Community normalizes operational signals, calculates deterministic metr
 ## What is included
 
 - Product-scoped evidence, goals, competitors, dashboards, actions, and Growth Missions.
-- Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Cloudflare Operations, and Agency Client.
+- Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Infrastructure Operations, and Agency Client.
 - BYOK Agent conversations, Executive Briefs, model comparison, task history, and evidence citations.
 - Signal Radar for deterministic period comparisons and cross-signal hypotheses without causal overclaiming.
-- Google Analytics/Search Console, Bing Webmaster, Cloudflare D1 business aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, and Custom REST connectors.
+- Google Analytics/Search Console, Bing Webmaster, Cloudflare D1 business aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, Cloudflare Workers/R2/Pages/Queues, GitHub, Vercel, and Custom REST connectors.
 - Manual imports, open ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
-- English and Simplified Chinese dashboard navigation, workspace-level locale preferences, and focused tabbed workflows.
+- English or Simplified Chinese as a deployment-wide interface locale, plus focused tabbed workflows.
 - Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable evidence export.
 
 Dashloom Community is a standalone open-source product. It has no source, package, runtime, database, deployment, Git, or build dependency on the private Dashloom Cloud repository.
 
 ## Deployment methods and data sources are separate concerns
 
-Dashloom Community runs on infrastructure you control. Choose a deployment target and application database first; after signing in, connect only the business sources whose evidence you need. Deploying on a platform does not automatically make that platform a Dashloom data source.
+Dashloom Community runs on infrastructure you control. Choose a deployment target and application database first; after signing in, connect only the evidence sources you need. Deploying on a platform does not automatically authorize it as a Dashloom data source, but Cloudflare, GitHub, and Vercel can be connected separately with scoped read-only credentials.
 
 ### Deployment paths
 
@@ -57,9 +57,9 @@ Dashloom Community runs on infrastructure you control. Choose a deployment targe
 | Storage | Cloudflare D1, Supabase PostgreSQL | Stores authentication, workspace configuration, normalized evidence, Agent state, reports, schedules, and audit history |
 | Application | Next.js, React, Node.js | Provides the server runtime and product interface |
 | Development | TypeScript, Tailwind CSS | Provides typed application code and the UI styling system |
-| Optional Cloudflare analytics | Cloudflare R2 | Supplies bounded operational metrics through the retained compatibility connector; it is not an application storage backend |
+| Infrastructure evidence | Cloudflare Workers, R2, Pages, Queues; GitHub; Vercel | Supplies bounded runtime, storage, queue, repository, and deployment metrics through separately authorized read-only connectors |
 
-The Dashboard business-source catalog covers Google Analytics, Google Search Console, Bing Webmaster Tools, Cloudflare D1 business data, Stripe, Lemon Squeezy, Creem, Polar, Paddle, and custom ingestion. Deployment platforms and application databases remain separate from this catalog.
+The Data sources catalog separates business and growth evidence from an **Infrastructure & delivery** tab for Cloudflare Workers, R2, Pages, Queues, GitHub, and Vercel. A provider may be both a deployment target and a separately authorized evidence source; those roles never share credentials implicitly.
 
 See the [Cloudflare deployment guide](docs/deployment-cloudflare.md) and [Vercel and AWS deployment guide](docs/deployment-next.md) for setup details.
 
@@ -77,9 +77,9 @@ Each product owns its connector mappings, normalized metrics, goals, competitors
 
 ![Dashloom product portfolio with fictional data](docs/images/readme/products-en.png)
 
-### Bilingual, task-focused workspace
+### Deployment-localized, task-focused workspace
 
-Choose English or Simplified Chinese from the dashboard account menu or **Settings → Workspace**. The preference is stored on the workspace and applies to navigation and core product pages. Products, data sources, Agent analysis, and settings use tabs to keep long operational workflows focused without changing their authorization or data boundaries.
+Choose English or Simplified Chinese at deployment time with `DASHLOOM_DEFAULT_LOCALE`. Community uses one locale for the deployment and does not expose Cloud-style locale routes or per-workspace language switching. Products, data sources, Agent analysis, and settings use tabs to keep long workflows focused without changing authorization or data boundaries.
 
 ## Architecture
 
@@ -184,6 +184,7 @@ Open **Products**, then add the product name, public domain, and category. A pro
 Open **Data sources** and choose one path:
 
 - connect Google Analytics/Search Console, Bing Webmaster, or a supported revenue provider with a least-privilege credential;
+- connect Cloudflare Workers, R2, Pages, Queues, GitHub, or Vercel from **Infrastructure & delivery** with a separate read-only credential;
 - configure a read-only aggregate D1 query;
 - import normalized metric rows manually;
 - create a scoped ingestion key for the TypeScript SDK or Connector Worker;
@@ -228,7 +229,7 @@ An Agent run freezes the evidence bundle used for the answer. Findings must cite
 | `AUTH_EMAIL_WEBHOOK_URL` | For email delivery | HTTPS endpoint for verification and password-reset mail. |
 | `AUTH_EMAIL_WEBHOOK_SECRET` | For email delivery | Authentication secret sent to the email relay. |
 | `AUTH_REQUIRE_EMAIL_VERIFICATION` | Optional | Set to `true` when production email delivery is configured. |
-| `DASHLOOM_DEFAULT_LOCALE` | Optional | Deployment default for authentication, recovery emails, and new workspaces. Use `en` (default) or `zh-CN`; users can still change their workspace language later. |
+| `DASHLOOM_DEFAULT_LOCALE` | Optional | Deployment-wide locale for authentication, recovery emails, navigation, and product pages. Use `en` (default) or `zh-CN`; Community does not expose an in-app language switch. |
 | `NEXT_PUBLIC_APP_URL` | Optional | Public, non-secret origin override; belongs in `.env`. |
 | `DASHLOOM_DATABASE` | Node deployment | Selects `d1` or `supabase` at build and runtime. |
 | `CLOUDFLARE_ACCOUNT_ID` | Node + D1 | Cloudflare account that owns the application D1 database. |
@@ -270,7 +271,7 @@ A migration file existing in the repository is not proof that production was mig
 
 The Node.js runtime supports two complete storage paths: Remote D1 through Cloudflare's authenticated HTTP API, or Supabase PostgreSQL through the pooled PostgreSQL adapter. The Supabase path stores authentication, workspace configuration, normalized evidence, Agent state, reports, schedules, and audit history in the same 38-table application model.
 
-Set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN` in the Vercel or AWS environment before building. It controls the initial authentication language, authentication email language, and locale assigned to newly created workspaces. Existing workspace preferences remain unchanged.
+Set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN` in the Vercel or AWS environment before building. It controls the language of authentication, emails, navigation, and product pages for the whole Community deployment.
 
 See the [Vercel and AWS deployment guide](docs/deployment-next.md) for backend selection, build commands, scheduler integration, pooler settings, migrations, and verification. A successful build does not prove that a remote database was migrated.
 

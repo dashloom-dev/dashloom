@@ -23,7 +23,7 @@ Run `npm ci` and `npm test` locally before connecting the repository to the host
 
 Copy `node-runtime.env.example` into the environment-variable settings for the selected platform. Always configure the authentication, credential-encryption, and cron secrets. Then choose exactly one storage backend:
 
-- Language: set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN`. It selects the default authentication and recovery language and the locale assigned to new workspaces. Workspace owners can change their locale later; changing the deployment value does not overwrite existing workspaces.
+- Language: set `DASHLOOM_DEFAULT_LOCALE=en` or `DASHLOOM_DEFAULT_LOCALE=zh-CN`. It controls authentication, recovery emails, navigation, and product pages for the whole Community deployment. Community does not expose localized dashboard routes or an in-app language switch; change this value and rebuild to change the deployment language.
 - D1: set `DASHLOOM_DATABASE=d1` and configure the three `CLOUDFLARE_*` fields with a dedicated token scoped to the intended database.
 - Supabase: set `DASHLOOM_DATABASE=supabase` and configure `SUPABASE_DATABASE_URL`. Prefer the Supabase transaction pooler URL for serverless hosting. TLS is required by default and prepared statements are disabled for pooler compatibility.
 
@@ -87,12 +87,12 @@ npm run build:next
 npm run build:supabase
 ```
 
-Then verify sign-in, workspace language switching, one connector synchronization, one Agent run, and both authenticated cron endpoints against the selected backend.
+Then verify sign-in and dashboard localization, one connector synchronization, one Agent run, and both authenticated cron endpoints against the selected backend.
 
 ## Production checklist and rollback
 
 1. Confirm `BETTER_AUTH_URL` matches the final HTTPS origin and test sign-in and recovery.
-2. Create a workspace and verify that the selected `DASHLOOM_DEFAULT_LOCALE` is applied only to new workspaces.
+2. Verify that authentication, navigation, and product pages use the selected `DASHLOOM_DEFAULT_LOCALE`.
 3. Run one connector synchronization and confirm evidence is stored in the selected backend.
 4. Call both Cron endpoints with the production `REPORT_CRON_SECRET` and inspect the automation ledger.
 5. Test export and one cited Agent run before announcing availability.
