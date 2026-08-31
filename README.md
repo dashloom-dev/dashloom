@@ -2,6 +2,8 @@
 
 [简体中文](README.zh-CN.md) · English
 
+Website：https://dashloom.dev/
+
 Self-hosted AI product intelligence for teams that want one evidence layer across product analytics, revenue, acquisition, search, and business operations.
 
 Dashloom Community normalizes operational signals, calculates deterministic metrics, and lets specialized Agents analyze the resulting evidence with your own OpenAI-compatible model. Your application, D1 or Supabase PostgreSQL database, provider credentials, schedules, and reports run in infrastructure you control.
