@@ -2,6 +2,8 @@
 
 简体中文 · [English](README.md)
 
+网址：https://dashloom.dev/zh
+
 Dashloom Community 是一套自托管的 AI 产品情报系统，帮助团队把产品分析、收入、获客、搜索和业务运营信号汇总到同一层可验证证据中。
 
 Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent 使用你自己的 OpenAI 兼容模型分析这些证据。应用、D1 或 Supabase PostgreSQL 数据库、Provider 凭证、定时任务和报告都运行在你控制的基础设施中。
