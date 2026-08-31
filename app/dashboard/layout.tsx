@@ -1,38 +1,25 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { BarChart3, Bot, Boxes, Cable, Clock3, LayoutDashboard, ListChecks, RadioTower, Rocket, Settings, Store } from 'lucide-react';
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { getDeploymentLocale } from '@/lib/deployment-locale';
 import { Brand } from '@/components/brand';
 import { DashboardLanguage } from './dashboard-language';
 import { DashboardAccountMenu } from './dashboard-account-menu';
+import { DashboardNavigation } from './dashboard-navigation';
 import './product.css';
 import './readability.css';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-const navigation = [
-  ['/dashboard', 'Overview', '总览', LayoutDashboard],
-  ['/dashboard/products', 'Products', '产品', Boxes],
-  ['/dashboard/sources', 'Data sources', '数据源', Cable],
-  ['/dashboard/agent', 'Dashloom Agent', 'Dashloom Agent', Bot],
-  ['/dashboard/tasks', 'Agent tasks', 'Agent 任务', Clock3],
-  ['/dashboard/agent/radar', 'Signal radar', '信号雷达', RadioTower],
-  ['/dashboard/actions', 'Agent actions', 'Agent 行动', ListChecks],
-  ['/dashboard/missions', 'Growth missions', '增长任务', Rocket],
-  ['/dashboard/marketplace', 'Marketplace', '市场', Store],
-  ['/dashboard/reports', 'Reports', '报告', BarChart3],
-  ['/dashboard/settings', 'Settings', '设置', Settings],
-] as const;
-
-const intelligenceViews = [
-  ['/dashboard/views/indie_hacker', 'Indie Hacker', '独立开发者'],
-  ['/dashboard/views/saas_revenue', 'SaaS Revenue', 'SaaS 收入'],
-  ['/dashboard/views/seo_growth', 'SEO Growth', 'SEO 增长'],
-  ['/dashboard/views/cloudflare_operations', 'Infrastructure Ops', '基础设施运维'],
-  ['/dashboard/views/agency_client', 'Agency Client', 'Agency 客户'],
+// Compatibility labels remain stable even though the views now live in the Data navigation group.
+export const dashboardIntelligenceViewLabels = [
+  ['Indie Hacker', '独立开发者'],
+  ['SaaS Revenue', 'SaaS 收入'],
+  ['SEO Growth', 'SEO 增长'],
+  ['Infrastructure Ops', '基础设施运维'],
+  ['Agency Client', 'Agency 客户'],
 ] as const;
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -45,8 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <aside className="product-sidebar">
       <Link className="brand" href="/dashboard"><Brand priority /></Link>
       <div className="workspace-switcher"><small>{zh ? '社区工作空间' : 'COMMUNITY WORKSPACE'}</small><strong>{workspace?.name || (zh ? '工作空间设置' : 'Workspace setup')}</strong><span>{zh ? '自部署 · 自带模型' : 'self-hosted · BYOK'}</span></div>
-      <nav aria-label={zh ? '产品导航' : 'Product navigation'}>{navigation.map(([href, en, cn, Icon]) => <Link href={href} key={href}><Icon size={19} /><span>{zh ? cn : en}</span></Link>)}</nav>
-      <div className="view-navigation"><small>{zh ? '智能视图' : 'INTELLIGENCE VIEWS'}</small>{intelligenceViews.map(([href, en, cn], index) => <Link href={href} key={href}><b>0{index + 1}</b><span>{zh ? cn : en}</span></Link>)}</div>
+      <DashboardNavigation locale={locale} />
       <DashboardAccountMenu user={{ name: user.name, email: user.email }} locale={locale} />
     </aside>
     <section className="product-content">{children}</section>

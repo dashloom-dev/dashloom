@@ -7,7 +7,7 @@ type Product = { id: string; name: string; domain: string | null; category: stri
 type ImpactItem = { key: string; label: string; count: number };
 type DeletionImpact = { deleted: ImpactItem[]; detached: ImpactItem[]; deletedTotal: number; detachedTotal: number };
 
-export function ProductForm({ canManage }: { canManage: boolean }) {
+export function ProductForm({ canManage, zh = false }: { canManage: boolean; zh?: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
@@ -24,18 +24,18 @@ export function ProductForm({ canManage }: { canManage: boolean }) {
     });
     const result = await response.json() as { error?: string };
     setPending(false);
-    if (!response.ok) return setMessage(result.error || 'Could not add this product.');
+    if (!response.ok) return setMessage(result.error || (zh ? '无法添加该产品。' : 'Could not add this product.'));
     (event.target as HTMLFormElement).reset();
-    setMessage('Product added. Connect its data sources next.');
+    setMessage(zh ? '产品已添加，下一步请连接数据源。' : 'Product added. Connect its data sources next.');
     router.refresh();
   }
 
   return <form className="product-form" onSubmit={submit}>
-    <label>Product name<input name="name" minLength={2} maxLength={80} required disabled={!canManage} placeholder="Nimbus Analytics" /></label>
-    <label>Domain<input name="domain" maxLength={255} disabled={!canManage} placeholder="nimbus.example" /></label>
-    <label>Category<input name="category" maxLength={80} disabled={!canManage} placeholder="Analytics" /></label>
-    <button className="app-primary" disabled={!canManage || pending}>{pending ? 'Adding…' : 'Add product'}</button>
-    {!canManage && <p className="form-message" role="status">Owner or admin access is required to manage products.</p>}
+    <label>{zh ? '产品名称' : 'Product name'}<input name="name" minLength={2} maxLength={80} required disabled={!canManage} placeholder={zh ? '例如：增长分析平台' : 'Nimbus Analytics'} /></label>
+    <label>{zh ? '主域名' : 'Domain'}<input name="domain" maxLength={255} disabled={!canManage} placeholder={zh ? '例如：example.com' : 'nimbus.example'} /></label>
+    <label>{zh ? '产品分类' : 'Category'}<input name="category" maxLength={80} disabled={!canManage} placeholder={zh ? '例如：数据分析' : 'Analytics'} /></label>
+    <button className="app-primary" disabled={!canManage || pending}>{pending ? (zh ? '添加中…' : 'Adding…') : (zh ? '添加产品' : 'Add product')}</button>
+    {!canManage && <p className="form-message" role="status">{zh ? '只有所有者或管理员可以管理产品。' : 'Owner or admin access is required to manage products.'}</p>}
     {message && <p className="form-message" role="status">{message}</p>}
   </form>;
 }
