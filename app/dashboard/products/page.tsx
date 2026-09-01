@@ -28,9 +28,9 @@ export default async function ProductsPage() {
   const zh = getDeploymentLocale() === 'zh';
 
   return <div className="app-page">
-    <header className="app-page-head"><div><span>{zh ? '产品设置' : 'PRODUCT SETTINGS'}</span><h1>{zh ? '产品列表' : 'Product list'}</h1><p>{zh ? '集中管理产品信息、状态和真实数据覆盖情况；添加产品与目标设置分别在独立页面完成。' : 'Manage product identity, lifecycle, and real data coverage without mixing creation and target configuration into this page.'}</p></div><div className="action-head-controls"><Link className="app-primary" href="/dashboard/products/new">{zh ? '添加产品' : 'Add product'}</Link><Link className="app-secondary" href="/dashboard/sources">{zh ? '连接数据' : 'Connect data'}</Link></div></header>
+    <header className="app-page-head"><div><span>{zh ? '全部产品' : 'ALL PRODUCTS'}</span><h1>{zh ? '产品' : 'Products'}</h1><p>{zh ? '查看产品名称、状态、已连接的数据源和最新数据日期。' : 'See each product’s name, status, connected data sources, and latest data date.'}</p></div><div className="action-head-controls"><Link className="app-primary" href="/dashboard/products/new">{zh ? '添加产品' : 'Add product'}</Link><Link className="app-secondary" href="/dashboard/sources">{zh ? '连接数据' : 'Connect data'}</Link></div></header>
     <ProductLifecycleControls products={rows} canManage={canManage} canDelete={canDelete} />
-    {rows.length > 0 && <><div className="section-label"><span>REAL DATA COVERAGE</span><h2>What is actually connected to each product</h2></div><section className="product-coverage-grid">{rows.map((product) => {
+    {rows.length > 0 && <><div className="section-label"><span>DATA CONNECTIONS</span><h2>Data available for each product</h2></div><section className="product-coverage-grid">{rows.map((product) => {
       const readiness = summarizeAgentReadiness(recentMetrics.filter((item) => item.productId === product.id), recentCompetitors.filter((item) => item.productId === product.id));
       const coverage = buildProductDataCoverage({ productId: product.id, mappings, evidence, readiness });
       return <article className="product-coverage-card" key={product.id} data-status={coverage.status}>

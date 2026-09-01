@@ -28,13 +28,13 @@ export type FirstValueStep = {
 };
 
 const definitions: Array<Omit<ActivationMilestone, 'complete' | 'state'> & { isComplete: (input: ActivationInput) => boolean }> = [
-  { id: 'product', title: 'Add a real product', description: 'Define the product whose signals the Agent should understand.', href: '/dashboard/products', isComplete: (input) => input.productCount > 0 },
-  { id: 'source', title: 'Map or import a source', description: 'Connect a provider resource or use authenticated ingestion.', href: '/dashboard/sources', isComplete: (input) => input.sourceReady || input.recentEvidenceCount > 0 },
-  { id: 'evidence', title: 'Collect recent evidence', description: 'Store at least one real metric point from the last 14 days.', href: '/dashboard/products', isComplete: (input) => input.recentEvidenceCount > 0 },
+  { id: 'product', title: 'Add a product', description: 'Enter the name and domain of a product you run.', href: '/dashboard/products', isComplete: (input) => input.productCount > 0 },
+  { id: 'source', title: 'Connect a data source', description: 'Connect an account, import a file, or use the Metrics API.', href: '/dashboard/sources', isComplete: (input) => input.sourceReady || input.recentEvidenceCount > 0 },
+  { id: 'evidence', title: 'Import current data', description: 'Import at least one metric dated within the last 14 days.', href: '/dashboard/products', isComplete: (input) => input.recentEvidenceCount > 0 },
   { id: 'model', title: 'Enable an AI model', description: 'Connect BYOK AI or use an available managed allowance.', href: '/dashboard/agent#ai-provider', isComplete: (input) => input.modelReady },
-  { id: 'analysis', title: 'Run the Agent', description: 'Create the first evidence-linked specialist analysis.', href: '/dashboard/agent', isComplete: (input) => input.successfulAnalysisCount > 0 },
-  { id: 'action', title: 'Plan an Agent action', description: 'Turn a finding into an owned, trackable next move.', href: '/dashboard/actions', isComplete: (input) => input.actedOnFindingCount > 0 },
-  { id: 'report', title: 'Schedule the loop', description: 'Enable a daily, weekly, or monthly recurring report.', href: '/dashboard/reports', isComplete: (input) => input.reportScheduleCount > 0 },
+  { id: 'analysis', title: 'Create a report', description: 'Generate the first report from your imported data.', href: '/dashboard/agent', isComplete: (input) => input.successfulAnalysisCount > 0 },
+  { id: 'action', title: 'Assign a task', description: 'Give one report item an owner or mark it as in progress.', href: '/dashboard/actions', isComplete: (input) => input.actedOnFindingCount > 0 },
+  { id: 'report', title: 'Schedule a report', description: 'Choose a daily, weekly, or monthly delivery schedule.', href: '/dashboard/reports', isComplete: (input) => input.reportScheduleCount > 0 },
 ];
 
 export function buildActivationProgress(input: ActivationInput) {
@@ -54,9 +54,9 @@ export function buildActivationProgress(input: ActivationInput) {
 
 export function buildFirstValueGuide(input: Pick<ActivationInput, 'productCount' | 'sourceReady' | 'recentEvidenceCount' | 'modelReady' | 'successfulAnalysisCount'>) {
   const definitions: Array<Omit<FirstValueStep, 'complete' | 'state'> & { complete: boolean }> = [
-    { id: 'product', title: 'Create your first product', description: 'Name the real product whose performance you want Dashloom to understand.', href: '/dashboard/products', action: 'Create product', complete: input.productCount > 0 },
-    { id: 'data', title: 'Connect real data', description: input.sourceReady && input.recentEvidenceCount === 0 ? 'Your source is connected. Run its first sync so Dashloom has current evidence.' : 'Map a provider, import metrics, or create a scoped ingestion key.', href: '/dashboard/sources', action: input.sourceReady && input.recentEvidenceCount === 0 ? 'Sync connected source' : 'Connect data', complete: input.recentEvidenceCount > 0 },
-    { id: 'analysis', title: 'See your first analysis', description: input.modelReady ? 'Ask a specialist Agent to explain what changed and cite the underlying evidence.' : 'Enable an AI model, then run a specialist Agent against the evidence you collected.', href: input.modelReady ? '/dashboard/agent' : '/dashboard/agent#ai-provider', action: input.modelReady ? 'Run first analysis' : 'Enable AI model', complete: input.successfulAnalysisCount > 0 },
+    { id: 'product', title: 'Add your first product', description: 'Enter its name and domain.', href: '/dashboard/products', action: 'Add product', complete: input.productCount > 0 },
+    { id: 'data', title: 'Connect a data source', description: input.sourceReady && input.recentEvidenceCount === 0 ? 'The connection is ready. Run the first sync to import data.' : 'Connect an account, import a CSV, or create a Metrics API key.', href: '/dashboard/sources', action: input.sourceReady && input.recentEvidenceCount === 0 ? 'Sync connected source' : 'Connect data', complete: input.recentEvidenceCount > 0 },
+    { id: 'analysis', title: 'Create your first report', description: input.modelReady ? 'Generate a report from the data you imported.' : 'Choose an AI model, then generate the first report.', href: input.modelReady ? '/dashboard/agent' : '/dashboard/agent#ai-provider', action: input.modelReady ? 'Run first analysis' : 'Enable AI model', complete: input.successfulAnalysisCount > 0 },
   ];
   const firstIncomplete = definitions.findIndex((step) => !step.complete);
   const steps: FirstValueStep[] = definitions.map((step, index) => ({ ...step, state: step.complete ? 'complete' : index === firstIncomplete ? 'current' : 'upcoming' }));

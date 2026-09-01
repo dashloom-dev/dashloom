@@ -22,18 +22,18 @@ export function MissionLaunch({ actionId, actionTitle, recommendedAction, member
       assignedUserId: values.get('assignedUserId') || null,
     }) });
     const result = await response.json() as { error?: string }; setPending(false);
-    if (!response.ok) { setMessage(result.error || 'Growth mission could not be created.'); return; }
+    if (!response.ok) { setMessage(result.error || 'Follow-up could not be created.'); return; }
     router.push('/dashboard/missions'); router.refresh();
   }
-  if (launched) return <div className="mission-launched"><strong>Growth mission launched</strong><Link href="/dashboard/missions">Track progress →</Link></div>;
-  return <details className="mission-launch"><summary>Launch a measurable growth mission</summary><form onSubmit={submit}>
-    <label>Mission title<input name="title" defaultValue={actionTitle} required minLength={2} maxLength={160} /></label>
-    <label className="mission-hypothesis">Hypothesis<textarea name="hypothesis" required minLength={10} maxLength={700} rows={3} defaultValue={`If we ${actionPhrase}, the linked product metric should move toward the target.`} /></label>
+  if (launched) return <div className="mission-launched"><strong>Follow-up started</strong><Link href="/dashboard/missions">View progress →</Link></div>;
+  return <details className="mission-launch"><summary>Track a number after this task</summary><form onSubmit={submit}>
+    <label>Follow-up name<input name="title" defaultValue={actionTitle} required minLength={2} maxLength={160} /></label>
+    <label className="mission-hypothesis">What do you expect to happen?<textarea name="hypothesis" required minLength={10} maxLength={700} rows={3} defaultValue={`After we ${actionPhrase}, we expect the selected product number to move toward the target.`} /></label>
     <label>Target direction<select name="targetDirection" defaultValue="increase"><option value="increase">Increase</option><option value="decrease">Decrease</option></select></label>
     <label>Target change<input name="targetChangePercent" type="number" min="0.1" max="100" step="0.1" defaultValue="10" required /></label>
     <label>Due date (UTC)<input name="dueAt" type="date" required /></label>
     <label>Owner<select name="assignedUserId" defaultValue=""><option value="">Unassigned</option>{members.map((member) => <option value={member.userId} key={member.userId}>{member.name} · {member.email}</option>)}</select></label>
-    <footer><small>Dashloom freezes the exact source, currency, metric, and latest complete baseline. Progress is observational and never presented as causal proof.</small><button className="app-primary" disabled={pending}>{pending ? 'Launching…' : 'Launch mission'}</button></footer>
+    <footer><small>Dashloom saves the current value, source, currency, and date. Later changes do not prove this task caused them.</small><button className="app-primary" disabled={pending}>{pending ? 'Starting…' : 'Start follow-up'}</button></footer>
     {message && <small className="form-message" role="status">{message}</small>}
   </form></details>;
 }

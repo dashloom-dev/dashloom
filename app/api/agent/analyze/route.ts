@@ -10,8 +10,9 @@ import { recordAuditEvent } from '@/lib/audit';
 import { getWorkspaceAgentReadiness } from '@/lib/agent-readiness';
 import { agentDefinitions } from '@/lib/agent-catalog';
 import { resolveAgentProductScope } from '@/lib/agent-scope';
+import { AgentOutputFormatError } from '@/lib/agent-output';
 
-const input = z.object({ question: z.string().trim().min(3).max(1000), preset: z.enum(['portfolio_analyst', 'revenue_analyst', 'seo_growth_analyst', 'operations_analyst', 'client_reporting_analyst']).default('portfolio_analyst'), conversationId: z.string().uuid().optional(), productId: z.string().uuid().nullable().optional() });
+const input = z.object({ question: z.string().trim().min(3).max(1000), preset: z.enum(['portfolio_analyst', 'revenue_analyst', 'seo_growth_analyst', 'operations_analyst', 'client_reporting_analyst']).default('portfolio_analyst'), conversationId: z.string().uuid().optional(), productId: z.string().uuid().nullable().optional(), stream: z.boolean().optional() });
 
 export async function POST(request: Request) {
   const authSession = await createAuth().api.getSession({ headers: request.headers });
@@ -33,9 +34,30 @@ export async function POST(request: Request) {
       await getDb().insert(agentConversations).values({ id: conversationId, workspaceId: workspace.id, scopeMode: scope.mode, productId: scope.productId, agentPreset: preset, title: parsed.data.question.replace(/\s+/g, ' ').slice(0, 80), createdByUserId: authSession.user.id });
       await recordAuditEvent({ workspaceId: workspace.id, actorUserId: authSession.user.id, action: 'agent_conversation.created', targetType: 'agent_conversation', targetId: conversationId, metadata: { preset, scopeMode: scope.mode, productId: scope.productId } });
     }
+    if (parsed.data.stream) {
+      const encoder = new TextEncoder();
+      return new Response(new ReadableStream({
+        async start(controller) {
+          let open = true;
+          const send = (event: Record<string, unknown>) => {
+            if (!open || request.signal.aborted) return;
+            try { controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`)); } catch { open = false; }
+          };
+          try {
+            send({ type: 'conversation', conversationId });
+            const result = await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope, { abortSignal: request.signal, onProgress: (progress) => send({ type: 'progress', progress }) });
+            send({ type: 'complete', conversationId, runId: result.runId });
+          } catch (error) {
+            send({ type: 'error', error: error instanceof Error && error.name === 'AbortError' ? 'Analysis stopped.' : error instanceof Error ? error.message : 'Analysis failed', ...(error instanceof AgentOutputFormatError ? { code: error.code } : {}) });
+          } finally {
+            if (open) { try { controller.close(); } catch { /* client disconnected */ } }
+          }
+        },
+      }), { headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store' } });
+    }
     return NextResponse.json({ ...(await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope)), conversationId });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Analysis failed';
-    return NextResponse.json({ error: message }, { status: 422 });
+    return NextResponse.json({ error: message, ...(error instanceof AgentOutputFormatError ? { code: error.code } : {}) }, { status: error instanceof AgentOutputFormatError ? 502 : 422 });
   }
 }

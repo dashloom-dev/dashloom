@@ -40,7 +40,7 @@ export function ScheduleForm({ readinessByScope, defaultPreset, products, timezo
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
-    setMessage('Calculating the next intelligence run…');
+    setMessage('Checking the next run time…');
     const form = new FormData(event.currentTarget);
     const body = { name: String(form.get('name')), kind, agentPreset: preset, executivePresets, executiveQuestion: kind === 'executive' ? String(form.get('executiveQuestion') || '') : undefined, productId: productId || null, cadence: String(form.get('cadence')), timezone: String(form.get('timezone')), hourLocal: Number(form.get('hourLocal')), dayOfWeek: Number(form.get('dayOfWeek')), dayOfMonth: Number(form.get('dayOfMonth')), channelIds: [] };
     const response = await fetch('/api/report-schedules', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -52,7 +52,7 @@ export function ScheduleForm({ readinessByScope, defaultPreset, products, timezo
 
   const ready = kind === 'executive' ? executiveReady : specialistReady;
   return <form className="connector-form report-schedule-form" onSubmit={submit}>
-    <h2>Schedule recurring intelligence</h2>
+    <h2>Schedule a report</h2>
     <div className="schedule-kind-switch" role="group" aria-label="Report type"><button type="button" data-active={kind === 'specialist'} onClick={() => setKind('specialist')}>One specialist</button><button type="button" data-active={kind === 'executive'} onClick={() => setKind('executive')}>Executive Brief</button></div>
     <div className="settings-grid">
       <label>Schedule name<input key={kind} name="name" required defaultValue={kind === 'executive' ? 'Weekly executive brief' : 'Weekly operator brief'} /></label>
@@ -65,6 +65,6 @@ export function ScheduleForm({ readinessByScope, defaultPreset, products, timezo
       <label>Month day (1–31)<input name="dayOfMonth" type="number" min="1" max="31" defaultValue="1" /></label>
     </div>
     {kind === 'executive' && <div className="scheduled-executive-fields"><fieldset><legend>Specialists · select 2–5</legend><div className="scheduled-specialist-grid">{specialists.map(([value, label]) => <label key={value} data-ready={readiness[value]}><input type="checkbox" checked={executivePresets.includes(value)} disabled={!readiness[value] || pending} onChange={() => toggle(value)} /><span>{label}</span></label>)}</div></fieldset><label>Recurring executive question<textarea name="executiveQuestion" required minLength={3} maxLength={1000} rows={3} defaultValue="What needs executive attention first, why does it matter, and what should the team do next?" /></label><small>BYOK supports up to five specialists per occurrence.</small></div>}
-    <footer><small>{message || (ready ? 'Every occurrence keeps this product scope, freezes matching evidence, and retries safely in your deployment.' : kind === 'executive' ? `Choose 2–${capacity.capacity || 0} specialists with evidence in this scope.` : 'This product scope needs matching evidence and a connected model.')}</small><button className="app-primary" disabled={!canManage || !ready || pending}>{pending ? 'Working…' : 'Create schedule'}</button></footer>
+    <footer><small>{message || (ready ? 'Each run uses the latest matching data for this product range and retries failed runs.' : kind === 'executive' ? `Choose 2–${capacity.capacity || 0} report types that have data in this product range.` : 'This product range needs matching data and a connected model.')}</small><button className="app-primary" disabled={!canManage || !ready || pending}>{pending ? 'Working…' : 'Create schedule'}</button></footer>
   </form>;
 }
