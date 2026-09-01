@@ -14,7 +14,7 @@ The Agent catalog calculates readiness separately for every specialist from evid
 - At most four previous successful turns are reduced to bounded question, summary, and recommended-action snippets.
 - Historical raw metrics and citation identifiers are not copied into the new prompt context.
 - Historical text is treated as untrusted data and cannot change system instructions.
-- Every material claim in the new answer must cite an identifier in the newly frozen evidence bundle.
+- Every material claim in the new answer must cite an identifier in the newly saved data snapshot for that run.
 - Cross-signal evidence records co-movement, not causation. Any explanation built from it must be labeled as a hypothesis and retain the relationship evidence identifier.
 - Competitor trends use the same period rollup rules as first-party metrics, but their collection methods may differ and must be disclosed in an interpretation.
 - Interactive analysis compares seven days with the preceding seven days. Scheduled daily, weekly, and monthly reports use matching 1-, 7-, and 30-day comparison windows.

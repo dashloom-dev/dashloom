@@ -26,8 +26,8 @@ Dashloom 沿用来源 Agent 运行中的准确指标身份，包括数据源和�
 
 用户也可以在 Missions 页面手动刷新。更新同时校验工作空间和 active 状态，已经取消或完成的 Mission 不会被过期任务覆盖。
 
-## 重新进入 Agent 证据链
+## 重新进入 Agent 分析数据
 
-进行中和近期结束的 Mission 会以 `mission:<id>` 进入后续 Agent 的冻结证据包。Agent 可以引用目标和实际进度，但 Mission 标题与假设始终按不可信数据处理。系统规则要求明确披露非因果边界：Mission 启动后的指标变化不能证明由该行动导致。
+进行中和近期结束的 Mission 会以 `mission:<id>` 进入后续 Agent 的本次分析保存的数据快照。Agent 可以引用目标和实际进度，但 Mission 标题与假设始终按不可信数据处理。系统规则要求明确披露非因果边界：Mission 启动后的指标变化不能证明由该行动导致。
 
 Mission 的创建、取消、分配、来源、测量和状态都按工作空间隔离。Owner、Admin 和 Member 可以操作，Viewer 只读。客户安全的工作空间导出包含 Mission 历史，但不会包含模型或连接器凭证。

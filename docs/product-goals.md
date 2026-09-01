@@ -1,6 +1,6 @@
 # Product operating goals
 
-Product goals let an operator define what success means before asking an Agent for advice. Dashloom then evaluates each target from stored metric evidence and freezes the result into eligible Agent runs.
+Product goals let an operator define what success means before asking an Agent for advice. Dashloom then evaluates each target from stored metric data and freezes the result into eligible Agent runs.
 
 ## Create a goal
 
@@ -17,7 +17,7 @@ Only workspace owners and admins can create, pause, enable, or delete shared goa
 
 ## How progress is calculated
 
-Rolling periods contain 1, 7, 30, or 90 inclusive calendar days ending on the evidence date. Dashloom uses the metric's deterministic rollup policy:
+Rolling periods contain 1, 7, 30, or 90 inclusive calendar days ending on the data date. Dashloom uses the metric's deterministic rollup policy:
 
 - counters such as revenue, sessions, and requests are summed;
 - snapshots such as MRR and paid customers use the latest value;

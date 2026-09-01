@@ -1,6 +1,6 @@
 # Polar revenue setup
 
-Dashloom imports privacy-minimized commercial evidence from Polar for Revenue Agent analysis and recurring reports. It stores daily net order revenue, refunded amount, and paid transaction count by currency. It never stores customer IDs, names, email addresses, billing addresses, descriptions, metadata, invoice numbers, checkout IDs, subscription IDs, or order IDs.
+Dashloom imports privacy-minimized revenue data from Polar for Revenue Agent analysis and recurring reports. It stores daily net order revenue, refunded amount, and paid transaction count by currency. It never stores customer IDs, names, email addresses, billing addresses, descriptions, metadata, invoice numbers, checkout IDs, subscription IDs, or order IDs.
 
 ## Create the token
 

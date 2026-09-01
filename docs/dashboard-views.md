@@ -1,15 +1,25 @@
-# Reusable dashboard views
+# Save a dashboard you use often
 
-The five built-in dashboards remain stable analysis templates. Workspace members can save additional decision views from **Settings → Dashboard templates** without changing normalized source data.
+Save a dashboard view when you repeatedly check the same products and metrics. You can reopen it from settings instead of rebuilding the filters each time.
 
-A saved view can define:
+## Create a view
 
-- one of the five base templates;
-- a display name, title, and supporting explanation;
-- one to eight normalized metric names;
-- all products or one workspace product;
-- whether it is the default view for that base template.
+1. Open **Settings → Dashboard templates**.
+2. Choose one of the five built-in dashboard templates.
+3. Enter a view name, page title, and description.
+4. Select between one and eight normalized metrics.
+5. Choose all products or one product.
+6. Optionally make it the default view for that template.
+7. Save and open it, then confirm that the product scope and metrics are correct.
 
-Open a saved view from Settings. Default views also load when the base dashboard URL is opened without a `view` query parameter. View identifiers are always resolved together with the active workspace and preset; a link from another workspace cannot expose its configuration or product data.
+A saved view stores display settings on top of existing metrics. It does not copy or change the underlying data.
 
-Deleting a view does not delete metrics, products, Agent runs, or reports. Exported workspace backups include saved view configuration.
+## How the default view works
+
+When a view is the default, opening the base dashboard without a `view` query parameter loads it automatically. A link with an explicit `view` parameter still opens the requested saved view.
+
+Dashloom checks the view ID, workspace, and template together. A link copied from another workspace cannot expose that workspace's configuration or product data.
+
+## Edit or delete a view
+
+Edit the view when you need a different product or metric selection. Deleting it removes only the saved display settings; it does not delete products, metrics, Agent runs, or reports. Workspace exports include saved dashboard configuration.

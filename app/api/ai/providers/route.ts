@@ -39,13 +39,21 @@ export async function POST(request: Request) {
 
   const id = crypto.randomUUID();
   let baseUrl: string;
-  try { baseUrl = (process.env.NODE_ENV !== 'production' && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/.test(parsed.data.baseUrl) ? new URL(parsed.data.baseUrl) : await assertSafeRemoteUrl(parsed.data.baseUrl, 'Provider base URL')).toString().replace(/\/$/, ''); }
+  try {
+    const validatedUrl = process.env.NODE_ENV !== 'production' && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/.test(parsed.data.baseUrl) ? new URL(parsed.data.baseUrl) : await assertSafeRemoteUrl(parsed.data.baseUrl, 'Provider base URL');
+    const pathname = validatedUrl.pathname.replace(/\/+$/, '');
+    if (pathname.endsWith('/chat/completions')) validatedUrl.pathname = pathname.slice(0, -'/chat/completions'.length) || '/';
+    baseUrl = validatedUrl.toString().replace(/\/$/, '');
+  }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unsafe provider URL' }, { status: 400 }); }
   let status: 'connected' | 'attention' = 'attention';
   let checkMessage = 'Provider saved, but the models endpoint did not validate.';
   try {
-    const response = await fetch(`${baseUrl}/models`, { headers: { authorization: `Bearer ${parsed.data.apiKey}`, accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(10000) });
+    const providerUrl = new URL(baseUrl);
+    const validationUrl = providerUrl.hostname === 'api.kie.ai' ? new URL('/api/v1/chat/credit', providerUrl).toString() : `${baseUrl}/models`;
+    const response = await fetch(validationUrl, { headers: { authorization: `Bearer ${parsed.data.apiKey}`, accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(10000) });
     if (response.ok) { status = 'connected'; checkMessage = 'Provider connected.'; }
+    else if (response.status >= 300 && response.status < 400) checkMessage = 'Provider validation refused a redirect. Use the final API base URL.';
     else checkMessage = `Provider returned HTTP ${response.status} while validating.`;
   } catch { checkMessage = 'Provider could not be reached during validation.'; }
 

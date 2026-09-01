@@ -6,11 +6,11 @@ Agent Signal Radar is Dashloom's live decision queue. It scans the aggregate evi
 
 - material metric changes of at least 10%;
 - product health scores in `watch` or `risk` state;
-- operating goals that are off track, at risk, or missing matching evidence;
+- operating goals that are off track, at risk, or missing matching data;
 - Growth Missions that are off track, missed, or have insufficient evidence;
 - cross-domain signals moving together or diverging for the same product.
 
-Every item preserves its product, source, metric, currency, latest evidence date, and evidence reference. Monetary series remain separated by currency. The current partial day is excluded from scheduled-style comparison windows so incomplete flow metrics do not become false regressions.
+Every item preserves its product, source, metric, currency, latest data date, and evidence reference. Monetary series remain separated by currency. The current partial day is excluded from scheduled-style comparison windows so incomplete flow metrics do not become false regressions.
 
 ## Deterministic detection, optional AI
 
@@ -23,13 +23,13 @@ Select **Analyze signal** to explicitly call the most relevant ready specialist:
 - Operations Analyst for delivery and infrastructure signals;
 - Portfolio Analyst for product-specific or cross-domain signals.
 
-The selected Agent receives a fresh bounded evidence snapshot. Its answer must cite the radar item's current evidence and distinguish observed movement from hypotheses about cause. If the preferred specialist does not have matching evidence, Dashloom falls back to the Portfolio Analyst when it is ready.
+The selected Agent receives a fresh bounded evidence snapshot. Its answer must cite the radar item's current evidence and distinguish observed movement from hypotheses about cause. If the preferred specialist does not have matching data, Dashloom falls back to the Portfolio Analyst when it is ready.
 
 ## Activate the radar with real data
 
 1. Create the product you actually operate under **Products**.
 2. Map a supported account under **Data sources**, or use the normalized ingestion API.
-3. Run synchronization and verify that the product reports a recent evidence date.
+3. Run synchronization and verify that the product reports a recent data date.
 4. Open **Signal radar** after enough history exists for both comparison windows.
 5. Investigate a ranked item, turn the cited recommendation into an Agent Action, and approve a Growth Mission when a measurable target is appropriate.
 

@@ -5,7 +5,7 @@ Dashloom 的 Agent Quality Lab 会让 2—4 个已经连接的 OpenAI 兼容 Pro
 ## 发起对比
 
 1. 在 **Settings → Bring your own model** 中连接至少两个已验证 Provider。Owner 和 Admin 可以随时禁用 Provider；禁用会永久删除保存的加密凭证，但保留历史结果快照。
-2. 同步真实产品证据。
+2. 同步真实产品数据。
 3. 进入 **Agent → Agent Quality Lab**。
 4. 选择分析 Agent、勾选 2—4 个 Provider，填写同一个决策问题并开始对比。
 
@@ -15,7 +15,7 @@ Dashloom 的 Agent Quality Lab 会让 2—4 个已经连接的 OpenAI 兼容 Pro
 
 每次对比都会保存：
 
-- 冻结证据包和准确的对比周期；
+- 本次分析保存的数据快照和准确的对比周期；
 - Agent 预设、问题、Prompt 版本，以及冻结的 Agent Skill 版本和指令 Hash；
 - Provider 显示名称、模式和模型快照，不暴露 API Key；
 - 仅保留通过 Schema 与引用验证的结论；

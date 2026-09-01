@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { translateDashboard } from '../app/dashboard/dashboard-translations.ts';
 
 test('Chinese dashboard coverage includes critical settings, sources, radar, and marketplace copy', () => {
@@ -19,6 +22,53 @@ test('Chinese dashboard coverage includes critical settings, sources, radar, and
     'Installed',
   ];
   for (const source of critical) assert.notEqual(translateDashboard(source), source, `missing Chinese translation: ${source}`);
+});
+
+test('every static dashboard UI string is translated or an approved technical literal', () => {
+  const dashboardRoot = fileURLToPath(new URL('../app/dashboard/', import.meta.url));
+  const files: string[] = [];
+  const collect = (directory: string) => {
+    for (const name of readdirSync(directory)) {
+      const path = join(directory, name);
+      if (statSync(path).isDirectory()) collect(path);
+      else if (path.endsWith('.tsx')) files.push(path);
+    }
+  };
+  collect(dashboardRoot);
+
+  const approvedText = new Set(['English', 'BYOK ·', 'Dashloom Agent', 'DASHLOOM AGENT', 'Agent', 'Token', '/models', 'HTTPS JSON', 'GOOGLE OAUTH', 'v']);
+  const approvedAttributes = new Set([
+    'Northstar Labs', 'team@northstar.example', 'revenue', 'stripe', 'USD',
+    'https://hooks.example.com/…', 'team@example.com', '123456789:bot-token',
+    'https://cdn.example.com/logo.svg', 'https://example.com/support', 'saas-unit-economics',
+    'gpt-5-mini', 'teammate@example.com', 'signup_conversion', 'ga4', 'conversions', 'signups',
+    'my-pages-project', 'bucket-name or eu_bucket-name', 'acme.example', 'semrush', 'prod_…',
+    'creem_…', 'https://api.example.com/dashloom/metrics', 'X-API-Key',
+    'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', 'owner/repository', 'github_pat_…', 'eyJ…',
+    'pdl_live_apikey_…', 'UUID', 'polar_oat_…', 'rk_live_…',
+    'https://abcdefghijklmnopqrst.supabase.co', 'sb_publishable_…', 'my-project', 'team_…',
+    'abcdefghijklmnopqrst', 'sbp_…',
+  ]);
+  const misses: string[] = [];
+  const inspect = (path: string, kind: 'text' | 'attribute', value: string) => {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    if (!/[A-Za-z]/.test(normalized) || /[\u3400-\u9fff]/.test(normalized)) return;
+    if (translateDashboard(normalized) !== normalized) return;
+    const approved = kind === 'text' ? approvedText.has(normalized) : approvedAttributes.has(normalized) || normalized.startsWith('Acme ');
+    if (!approved) misses.push(`${path.replace(dashboardRoot, '')}: ${normalized}`);
+  };
+
+  for (const path of files) {
+    const source = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxText(node)) inspect(path, 'text', node.getText(source));
+      if (ts.isJsxAttribute(node) && ['placeholder', 'title', 'aria-label'].includes(node.name.getText(source)) && node.initializer && ts.isStringLiteral(node.initializer)) inspect(path, 'attribute', node.initializer.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+
+  assert.deepEqual(misses, [], `untranslated dashboard UI copy:\n${misses.join('\n')}`);
 });
 
 test('Chinese intelligence views cover templates, metrics, actions, and empty states', () => {

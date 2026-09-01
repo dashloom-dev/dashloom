@@ -30,7 +30,7 @@ export async function assertSafeRemoteUrl(value: string, purpose = 'URL') {
   const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (/^[\d.]+$/.test(hostname) || hostname.includes(':')) return url;
   const answers = await Promise.all(['A', 'AAAA'].map(async (type) => {
-    const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`, { headers: { accept: 'application/dns-json' }, redirect: 'error', signal: AbortSignal.timeout(5000) });
+    const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`, { headers: { accept: 'application/dns-json' }, redirect: 'manual', signal: AbortSignal.timeout(5000) });
     if (!response.ok) throw new Error(`${purpose} DNS validation returned HTTP ${response.status}.`);
     const payload = await response.json() as { Answer?: Array<{ type?: number; data?: string }> };
     return (payload.Answer || []).filter((answer) => answer.type === 1 || answer.type === 28).map((answer) => answer.data || '');

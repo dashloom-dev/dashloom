@@ -1,7 +1,36 @@
-# Agent task center
+# View and retry Agent tasks
 
-`/dashboard/tasks` is the workspace-scoped execution ledger for the latest 50 Agent analysis runs. It shows queued, running, successful, failed, and cancelled states; trigger and product scope; elapsed time; input and output token totals; stable error codes; and the current managed-AI daily allowance. Connected BYOK capacity is reported separately because BYOK runs do not consume the managed allowance.
+Open **Agent → Tasks** when an analysis is stuck, a run failed, or you want to see what happened. The page shows the 50 most recent tasks in the current workspace.
 
-A failed or cancelled chat run is retryable only when Dashloom can recover the exact original question from its frozen evidence, the conversation is still active, and its locked product still exists. Retrying reuses the existing analysis endpoint, so membership, tenant scope, evidence freshness, model availability, and current quota are checked again. Scheduled, legacy, archived-conversation, missing-product, and malformed-evidence runs are never silently reconstructed; the task center explains why they require a manual restart.
+## What the task list shows
 
-The list does not persist raw model or provider errors. It exposes stable error categories and links to the run's frozen-evidence audit page.
+- queued, running, successful, failed, and cancelled states;
+- whether a person, report, alert, or another feature started the task;
+- all-products or single-product scope;
+- duration and input/output token usage;
+- a safe, stable error category;
+- whether the deployment currently has a usable BYOK model connection.
+
+Community runs Agents through your own OpenAI-compatible provider. It does not use Dashloom managed credits.
+
+## When you can retry
+
+A failed task shows **Retry** only when Dashloom can safely recover the original question and scope. Retrying uses the same question, then checks your current permission, data freshness, and model connection again.
+
+Automatic retry is unavailable when:
+
+- a schedule created the original task;
+- the conversation is archived;
+- the selected product was deleted;
+- the task is too old or its saved data is incomplete.
+
+The page explains the reason. Return to the original feature and start a new task instead of guessing the old parameters.
+
+## Troubleshooting order
+
+1. Check the error category and product scope.
+2. Open the task's saved data snapshot and verify its dates and references.
+3. Check the source connection and BYOK model connection.
+4. Retry once after the underlying condition is fixed.
+
+The task center does not store provider raw errors or display API keys. When contacting support, send the task time, stable error code, and a screenshot—never a credential.

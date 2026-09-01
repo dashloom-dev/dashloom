@@ -4,30 +4,32 @@
 
 网址：https://dashloom.dev/zh
 
-Dashloom Community 是一套自托管的 AI 产品情报系统，帮助团队把产品分析、收入、获客、搜索和业务运营信号汇总到同一层可验证证据中。
+Dashloom Community 是一个自托管的数据与 AI 工作台：把产品、收入、获客、搜索和运营数据放到一起，帮助团队判断下一步先做什么。
 
-Dashloom 会标准化运营数据、计算确定性指标，再让专用 Agent 使用你自己的 OpenAI 兼容模型分析这些证据。应用、D1 或 Supabase PostgreSQL 数据库、Provider 凭证、定时任务和报告都运行在你控制的基础设施中。
+接入你已经在用的平台，同步真实指标，再向专业 Agent 提一个具体问题。Dashloom 会先计算可比较的指标，再调用你自己的 OpenAI 兼容模型；重要结论都能点回本次使用的数据。应用、数据库、凭证、定时任务和报告都留在你控制的基础设施中。
+
+想先在本地试用，可以直接看[本地安装](#本地安装)，然后完成[首次使用教程](#首次使用教程)。README 的其余部分用于说明功能、部署选择和生产配置。
 
 ![使用虚构数据的 Dashloom Community 总览](docs/images/readme/overview-zh.png)
 
 > 所有截图都使用虚构的产品、身份、域名和指标，并由 Community 版本的真实 UI 组件和样式渲染。
 
-## 包含哪些能力
+## 你能用它做什么
 
-- 以产品为范围隔离证据、目标、竞品、看板、行动和 Growth Mission。
+- 按产品隔离数据、目标、竞品、看板、行动和 Growth Mission。
 - 独立开发者、SaaS 收入、SEO 增长、基础设施运维和客户报告五类智能视图。
-- BYOK Agent 对话、Executive Brief、模型对比、任务历史和证据引用。
+- BYOK Agent 对话、Executive Brief、模型对比、任务历史，以及可点回原始数据的引用。
 - 使用确定性周期比较发现变化的信号雷达；关联信号不会被表述为因果关系。
 - Google Analytics/Search Console、Bing Webmaster、Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle、Cloudflare Workers/R2/Pages/Queues、GitHub、Vercel 和 Custom REST 连接器。
-- 手动导入、开放摄取 API Key、计算指标、定时同步和本地报告。
+- 手动导入、摄取 API Key、计算指标、定时同步和本地报告。
 - 部署级中英文界面选择，以及按任务分组的标签页工作流。
-- Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移证据导出。
+- Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移数据导出。
 
 Dashloom Community 是独立的开源产品，与私有 Dashloom Cloud 仓库不存在源码、Package、运行时、数据库、部署、Git 或构建依赖。
 
-## 部署方式与数据源是两类概念
+## 先选择部署位置，再决定接入哪些数据
 
-Dashloom Community 运行在你控制的基础设施中。先选择部署目标和应用数据库，登录后再按实际需要连接证据数据源。部署到某个平台不会自动授权其成为 Dashloom 数据源，但可以使用独立、限定范围的只读凭据连接 Cloudflare、GitHub 和 Vercel。
+Dashloom Community 运行在你控制的基础设施中。先选择部署目标和应用数据库，登录后再按需要连接数据源。部署到 Cloudflare、Vercel 或 AWS，不代表 Dashloom 自动获得这些平台的数据权限；需要分析 Cloudflare、GitHub 或 Vercel 时，再单独配置限定范围的只读凭据。
 
 ### 部署路径
 
@@ -67,15 +69,15 @@ Dashloom Community 运行在你控制的基础设施中。先选择部署目标�
 
 ## 产品功能
 
-### 以证据排序的信号雷达
+### 信号雷达先算变化，再交给 AI 解释
 
-Dashloom 先在相同产品、来源、指标、币种和维度内进行确定性比较，再把变化交给 Agent 解释。相关性和因果关系会被明确区分。
+Dashloom 只比较相同产品、来源、指标、币种和维度的数据，确认变化后再交给 Agent 解释。数据一起变化，不会被直接写成因果关系。
 
 ![使用虚构数据的 Dashloom 信号雷达](docs/images/readme/signal-radar-zh.png)
 
-### 产品是数据隔离边界
+### 每个产品单独管理数据和后续工作
 
-每个产品拥有自己的连接器映射、标准化指标、目标、竞品、Agent 证据、行动、任务和定时计划。数据覆盖卡片会显示实际连接内容及证据新鲜度。
+每个产品都有自己的连接器映射、指标、目标、竞品、Agent 分析、行动、任务和定时计划。产品卡片会显示接入了什么，以及数据最近什么时候更新。
 
 ![使用虚构数据的 Dashloom 产品组合](docs/images/readme/products-zh.png)
 
@@ -181,7 +183,7 @@ npm run dev
 
 进入**产品**，填写产品名称、公开域名和分类。产品是连接器映射、证据、看板、Agent 对话、目标和周期任务的隔离边界。
 
-### 第二步：连接或导入证据
+### 第二步：接入并同步数据
 
 进入**数据源**，选择一种方式：
 
@@ -192,7 +194,7 @@ npm run dev
 - 为 TypeScript SDK 或 Connector Worker 创建限定范围的摄取 Key；
 - 连接符合聚合指标校验协议的 Custom REST 接口。
 
-同步后，在产品覆盖卡片中检查数据源新鲜度、已存证据点数量和 Agent 就绪状态。Dashloom 不会向真实工作区混入演示数据。
+同步后回到产品卡片，确认出现数据点数量和最近数据日期。只保存连接还不算完成，首次同步必须真正写入指标。Dashloom 不会向真实工作区混入演示数据。
 
 ### 第三步：连接模型
 
@@ -200,15 +202,15 @@ npm run dev
 
 Community 的 Agent 只使用 BYOK，不需要 Dashloom 托管模型额度或订阅。
 
-### 第四步：提出带证据的问题
+### 第四步：问一个能直接做决定的问题
 
 进入 **Dashloom Agent**，选择专家类型和产品范围，然后提出类似问题：
 
 ```text
-本周有哪些值得调查的重大变化？每项建议分别由哪些证据支持？
+根据最近 7 天的数据，最应该先处理什么？每项建议分别由哪些数据支持？
 ```
 
-每次 Agent 运行都会冻结本次回答使用的证据包。发现必须引用包内证据，并披露截断或覆盖不足。
+每次 Agent 运行都会保存本次回答使用的数据快照。重要结论必须引用快照内的数据，并说明缺失或截断的范围。
 
 ### 第五步：建立持续运营循环
 

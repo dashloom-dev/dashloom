@@ -12,24 +12,24 @@ type NavGroup = { en: string; zh: string; icon: typeof LayoutDashboard; href?: s
 
 const groups: NavGroup[] = [
   { en: 'Overview', zh: '总览', icon: LayoutDashboard, href: '/dashboard' },
-  { en: 'Product settings', zh: '产品设置', icon: Boxes, mobileHref: '/dashboard/products', children: [
+  { en: 'Products', zh: '产品', icon: Boxes, mobileHref: '/dashboard/products', children: [
     { href: '/dashboard/products/new', en: 'Add product', zh: '添加产品', icon: Plus, exact: true },
-    { href: '/dashboard/products', en: 'Product list', zh: '产品列表', icon: Boxes, exact: true },
-    { href: '/dashboard/products/goals', en: 'Product goals', zh: '产品目标', icon: Target, exact: true },
+    { href: '/dashboard/products', en: 'All products', zh: '全部产品', icon: Boxes, exact: true },
+    { href: '/dashboard/products/goals', en: 'Goals', zh: '目标', icon: Target, exact: true },
   ] },
   { en: 'Data', zh: '数据', icon: ChartNoAxesCombined, mobileHref: '/dashboard/data', children: [
-    { href: '/dashboard/data', en: 'Data overview', zh: '数据总览', icon: Gauge },
-    { href: '/dashboard/charts', en: 'Data charts', zh: '数据图表', icon: BarChart3 },
+    { href: '/dashboard/data', en: 'By product', zh: '按产品查看', icon: Gauge },
+    { href: '/dashboard/charts', en: 'Charts', zh: '图表', icon: BarChart3 },
     { href: '/dashboard/sources', en: 'Data sources', zh: '数据源', icon: Cable },
-    { href: '/dashboard/views/indie_hacker', en: 'Intelligence views', zh: '智能视图', icon: Layers3 },
+    { href: '/dashboard/views/indie_hacker', en: 'Saved views', zh: '常用视图', icon: Layers3 },
   ] },
-  { en: 'Agent', zh: 'Agent', icon: Bot, mobileHref: '/dashboard/agent', children: [
-    { href: '/dashboard/agent', en: 'Agent settings', zh: 'Agent 设置', icon: Bot },
-    { href: '/dashboard/tasks', en: 'Agent tasks', zh: 'Agent 任务', icon: Clock3 },
-    { href: '/dashboard/actions', en: 'Actions', zh: '行动', icon: ListChecks },
-    { href: '/dashboard/agent/radar', en: 'Signal radar', zh: '信号雷达', icon: RadioTower },
-    { href: '/dashboard/missions', en: 'Growth missions', zh: '增长任务', icon: Rocket },
-    { href: '/dashboard/marketplace', en: 'Skill marketplace', zh: 'Skill 市场', icon: Store },
+  { en: 'AI reports', zh: 'AI 报告', icon: Bot, mobileHref: '/dashboard/agent', children: [
+    { href: '/dashboard/agent', en: 'Create report', zh: '生成报告', icon: Bot },
+    { href: '/dashboard/tasks', en: 'Report runs', zh: '运行记录', icon: Clock3 },
+    { href: '/dashboard/actions', en: 'Open tasks', zh: '待办任务', icon: ListChecks },
+    { href: '/dashboard/agent/radar', en: 'Notable changes', zh: '明显变化', icon: RadioTower },
+    { href: '/dashboard/missions', en: 'Follow-ups', zh: '结果跟进', icon: Rocket },
+    { href: '/dashboard/marketplace', en: 'AI extensions', zh: 'AI 扩展', icon: Store },
   ] },
   { en: 'Reports', zh: '报告', icon: BarChart3, href: '/dashboard/reports' },
   { en: 'Settings', zh: '设置', icon: Settings, href: '/dashboard/settings' },
@@ -48,7 +48,7 @@ export function DashboardNavigation({ locale }: { locale: 'en' | 'zh' }) {
       const active = group.href ? matches(pathname, group.href) : group.children?.some((item) => matches(pathname, item.href, item.exact)) || false;
       const Icon = group.icon;
       if (group.href) return <Link className="dashboard-nav-primary" aria-current={active ? 'page' : undefined} href={group.href} key={group.href}><Icon size={19} /><span>{zh ? group.zh : group.en}</span></Link>;
-      return <details className="dashboard-nav-group" open={active || group.en === 'Product settings' || group.en === 'Data'} key={group.en}>
+      return <details className="dashboard-nav-group" open={active || group.en === 'Products' || group.en === 'Data'} key={group.en}>
         <summary aria-current={active ? 'true' : undefined} onClick={(event) => { if (group.mobileHref && window.matchMedia('(max-width: 620px)').matches) { event.preventDefault(); router.push(group.mobileHref); } }}><Icon size={19} /><span>{zh ? group.zh : group.en}</span><ChevronDown className="nav-chevron" size={15} /></summary>
         <div>{group.children?.map((item) => { const ItemIcon = item.icon; const itemActive = matches(pathname, item.href, item.exact); return <Link aria-current={itemActive ? 'page' : undefined} href={item.href} key={item.href}><ItemIcon size={16} /><span>{zh ? item.zh : item.en}</span></Link>; })}</div>
       </details>;

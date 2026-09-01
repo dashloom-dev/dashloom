@@ -47,7 +47,7 @@ Cloudflare 只保留最近 31 天 R2 Analytics。因此每个 R2 指标都会标
 - Cloudflare 数据源卡片应显示已配置账号数量。
 - **Cloudflare Operations Dashboard** 应出现请求、错误、子请求和 CPU 数据。
 - **Overview** 应显示同步记录和指标总数。
-- **Dashloom Agent** 的证据上下文应统计已导入的数据点。
+- **Dashloom Agent** 的分析数据应统计已导入的数据点。
 
 Cloudflare Adaptive Analytics 属于分析估算值。Dashloom 会记录来源和采集时间，不会把它当作账单数据。
 

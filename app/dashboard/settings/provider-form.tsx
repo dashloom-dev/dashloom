@@ -24,7 +24,7 @@ export function ProviderForm({ returnTo, embedded = false }: { returnTo?: string
   }
   return <form id="ai-provider" className={`settings-form provider-form${embedded ? ' provider-form-embedded' : ''}`} onSubmit={submit}>
     <div className="settings-grid"><label>Display name<input name="displayName" required placeholder="My OpenAI-compatible API" /></label><label>API base URL<input name="baseUrl" type="url" required defaultValue="https://api.openai.com/v1" /></label><label>Model<input name="model" required placeholder="gpt-5-mini" /></label><label>API key<input name="apiKey" type="password" autoComplete="new-password" required placeholder="Stored encrypted; never displayed again" /></label></div>
-    <p>Dashloom validates <code>/models</code> before enabling the Agent. The key is encrypted server-side, never returned by the API, and can be removed by disabling the provider.</p>
+    <p>Dashloom validates a read-only provider endpoint before enabling the Agent. The key is encrypted server-side, never returned by the API, and can be removed by disabling the provider.</p>
     <button className="app-primary" disabled={pending}>{pending ? 'Validating…' : 'Connect provider'}</button>{message && <p className="form-message" role="status">{message}</p>}
   </form>;
 }

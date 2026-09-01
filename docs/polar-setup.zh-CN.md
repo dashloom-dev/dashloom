@@ -1,6 +1,6 @@
 # Polar 收入连接教程
 
-Dashloom 从 Polar 导入隐私最小化的商业证据，用于 Revenue Agent 和定期报告。系统只保存按日期、币种聚合的净订单收入、退款金额和支付交易数；不会保存客户 ID、姓名、邮箱、账单地址、描述、metadata、发票号、Checkout ID、订阅 ID 或订单 ID。
+Dashloom 从 Polar 导入隐私最小化的经营数据，用于 Revenue Agent 和定期报告。系统只保存按日期、币种聚合的净订单收入、退款金额和支付交易数；不会保存客户 ID、姓名、邮箱、账单地址、描述、metadata、发票号、Checkout ID、订阅 ID 或订单 ID。
 
 ## 创建 Token
 

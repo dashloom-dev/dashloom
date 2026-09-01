@@ -6,7 +6,7 @@ If your service is easier to poll than to push from, use the [Custom REST metric
 
 ## Create an ingestion key
 
-For a normal single-product sender, open **Data sources → Direct product ingestion**. Choose the product, create its product-scoped key, copy the secret once, and use the generated server-side command. After sending a real aggregate, select **Verify connection** to confirm persisted evidence, key usage, and which specialist Agents have enough recent evidence.
+For a normal single-product sender, open **Data sources → Direct product ingestion**. Choose the product, create its product-scoped key, copy the secret once, and use the generated server-side command. After sending a real aggregate, select **Verify connection** to confirm persisted evidence, key usage, and which specialist Agents have enough recent data.
 
 Only trusted multi-product pipelines should create a workspace-wide key under **Settings → Extensibility**. Product-scoped keys cannot write another product, even when that product belongs to the same workspace. Dashloom stores only each key's SHA-256 hash. The plaintext cannot be recovered; revoke the key and create another if it is lost.
 

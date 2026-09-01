@@ -1,6 +1,6 @@
 # Connect Stripe revenue evidence
 
-Dashloom imports commercial evidence for one product from each Stripe account: daily gross revenue, daily refunds, current monthly recurring revenue (MRR), and current paid-customer count. Values are limited to the account default currency so different currencies are never silently added together.
+Dashloom imports revenue data for one product from each Stripe account: daily gross revenue, daily refunds, current monthly recurring revenue (MRR), and current paid-customer count. Values are limited to the account default currency so different currencies are never silently added together.
 
 ## Create a restricted key
 

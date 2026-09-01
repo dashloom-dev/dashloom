@@ -48,13 +48,13 @@ export function LoginForm({ next = '/dashboard', locale = 'en' }: { next?: strin
   return <main className="auth-page" lang={zh ? 'zh-CN' : 'en'}>
     <section className="auth-intro">
       <Link className="brand" href={zh ? '/zh' : '/'}><Brand priority /></Link>
-      <div><span>{zh ? 'AI 产品智能平台' : 'AI PRODUCT INTELLIGENCE'}</span><h1>{zh ? <>连接真实数据。<br />让 Agent<br />发现关键信号。</> : <>Connect the facts.<br />Let your Agent<br />find the signal.</>}</h1><p>{zh ? '把 Google、收入、搜索和业务数据汇总到同一证据层，帮助多产品运营者做出有依据的决策。' : 'Bring Google, revenue, search, and business data into one evidence layer built for operators managing multiple products.'}</p></div>
+      <div><span>{zh ? '产品数据后台' : 'PRODUCT DASHBOARD'}</span><h1>{zh ? <>每天要看的数字，<br />都在这里。</> : <>The numbers you check<br />every day,<br />in one place.</>}</h1><p>{zh ? '登录后查看 Google、收入、搜索和业务数据。点开任意结果，都能看到对应的日期和数据源。' : 'Sign in to review Google, revenue, search, and business data. Open any result to see its dates and source.'}</p></div>
     </section>
     <section className="auth-panel">
       <form onSubmit={submit} className="auth-card">
         <span className="auth-kicker">{mode === 'signup' ? (zh ? '创建工作空间' : 'CREATE YOUR WORKSPACE') : mode === 'forgot' ? (zh ? '账号恢复' : 'ACCOUNT RECOVERY') : (zh ? '欢迎回来' : 'WELCOME BACK')}</span>
         <h2>{mode === 'signup' ? (zh ? '从真实工作空间开始' : 'Start with a real workspace') : mode === 'forgot' ? (zh ? '重置密码' : 'Reset your password') : (zh ? '登录 Dashloom' : 'Sign in to Dashloom')}</h2>
-        <p>{mode === 'signup' ? (zh ? '产品、凭证、指标和 Agent 历史都隔离在此工作空间中。' : 'Your products, credentials, metrics, and Agent history stay isolated in this workspace.') : mode === 'forgot' ? (zh ? '请输入账号邮箱。无论该地址是否存在，返回内容都保持一致。' : 'Enter your account email. The response is identical whether or not the address exists.') : (zh ? '继续查看产品、数据源和 Agent 分析。' : 'Continue to your products, data sources, and Agent brief.')}</p>
+        <p>{mode === 'signup' ? (zh ? '你的产品、数据和团队成员都会保存在独立的工作空间中。' : 'Your products, data, and team members stay in a separate workspace.') : mode === 'forgot' ? (zh ? '请输入账号邮箱。无论该地址是否存在，返回内容都保持一致。' : 'Enter your account email. The response is identical whether or not the address exists.') : (zh ? '登录后继续查看产品、数据和最近分析。' : 'Sign in to continue to your products, data, and latest analysis.')}</p>
         {mode === 'signup' && <label>{zh ? '姓名' : 'Name'}<input name="name" required minLength={2} autoComplete="name" placeholder="Alex Chen" /></label>}
         <label>{zh ? '邮箱' : 'Email'}<input name="email" required type="email" autoComplete="email" placeholder="you@company.com" /></label>
         {mode !== 'forgot' && <label>{zh ? '密码' : 'Password'}<input name="password" required type="password" minLength={10} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder={zh ? '至少 10 个字符' : 'At least 10 characters'} /></label>}

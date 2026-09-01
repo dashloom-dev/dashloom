@@ -47,7 +47,7 @@ Cloudflare retains R2 analytics for only 31 days. Every R2 metric is marked with
 - The Cloudflare source card should show the configured account count.
 - **Cloudflare Operations Dashboard** should show requests, errors, subrequests, and CPU evidence.
 - **Overview** should show the sync run and metric totals.
-- **Dashloom Agent** should count the imported points in its evidence context.
+- **Dashloom Agent** should count the imported points in its analysis data.
 
 Dashloom treats Cloudflare Adaptive Analytics values as analytics estimates. It records the source and collection time and does not present them as billing records.
 
