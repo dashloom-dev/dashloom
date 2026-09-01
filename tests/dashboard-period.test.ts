@@ -15,3 +15,12 @@ test('dashboard comparison rejects missing and invalid metric dates', () => {
   assert.equal(dashboardComparisonWindow('2026-02-30'), null);
   assert.equal(dashboardComparisonWindow('not-a-date'), null);
 });
+
+test('dashboard comparison supports a caller-selected range', () => {
+  assert.deepEqual(dashboardComparisonWindow('2026-09-01', 30), {
+    start: '2026-07-04',
+    split: '2026-08-03',
+    end: '2026-09-01',
+  });
+  assert.equal(dashboardComparisonWindow('2026-09-01', 0), null);
+});
