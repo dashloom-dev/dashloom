@@ -13,7 +13,9 @@ import { dashboardComparisonWindow } from '@/lib/dashboard-period';
 
 type DashboardLocale = 'en' | 'zh';
 
-export default async function IntelligenceViewPage({ params, searchParams }: { params: Promise<{ preset: string }>; searchParams: Promise<{ view?: string }> }) {
+export { DataDashboardPage as default } from './data-dashboard';
+
+export async function LegacyIntelligenceViewPage({ params, searchParams }: { params: Promise<{ preset: string }>; searchParams: Promise<{ view?: string }> }) {
   const { preset: requested } = await params;
   const query = await searchParams;
   if (!(requested in dashboardTemplates)) notFound();
