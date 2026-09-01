@@ -21,8 +21,12 @@ type Evidence = {
   healthScores?: Array<EvidenceItem & { productName: string; score: number; status: string; reasons: string[]; freshness: string | null }>;
   goals?: Array<EvidenceItem & { productName: string; name: string; metric: string; source: string | null; currency: string | null; direction: string; period: string; targetValue: number; currentValue: number | null; progressPercent: number | null; status: string; periodStart: string; periodEnd: string }>;
   missions?: Array<EvidenceItem & { productName: string | null; title: string; hypothesis: string; metric: string; source: string; currency: string | null; baselineValue: number; baselineDate: string; targetValue: number; latestValue: number | null; latestDate: string | null; progressPercent: number; status: string; assessment: string; dueAt: string; limitation: string }>;
+  images?: Array<EvidenceItem & { label: string; mimeType: string; byteSize: number; sha256: string }>;
 };
 type Findings = { summary: string; findings: Array<{ title: string; detail: string; severity: string; action: string; confidence: number; evidenceRefs: string[] }> };
+const imageSizeUnit = 'KB';
+const imageRetentionLabel = 'original image not retained';
+const visualEvidenceLabel = 'visual evidence';
 
 export default async function AnalysisAuditPage({ params }: { params: Promise<{ id: string }> }) {
   const { user } = await requireServerSession();
@@ -48,13 +52,15 @@ export default async function AnalysisAuditPage({ params }: { params: Promise<{ 
   const healthScores = cited(evidence.healthScores);
   const goals = cited(evidence.goals);
   const missions = cited(evidence.missions);
-  const citedCount = series.length + competitors.length + competitorTrends.length + crossSignals.length + healthScores.length + goals.length + missions.length;
+  const images = cited(evidence.images);
+  const citedCount = series.length + competitors.length + competitorTrends.length + crossSignals.length + healthScores.length + goals.length + missions.length + images.length;
 
   return <div className="app-page">
     <header className="app-page-head"><div><span>ANALYSIS AUDIT</span><h1>Frozen evidence</h1><p>{evidence.request?.question || 'Historical scheduled analysis'} · generated {new Date(evidence.generatedAt).toLocaleString()}</p></div><a className="app-secondary" href="/dashboard/agent">Back to Agent</a></header>
     <section className="real-metric-grid"><article><span>Status</span><strong>{run.status}</strong><small>{run.trigger} trigger</small></article><article><span>Evidence points</span><strong>{evidence.pointCount}</strong><small>fresh through {evidence.freshness || 'unknown'}</small></article><article><span>Current period</span><strong>{evidence.periods.current.end}</strong><small>{evidence.periods.current.start} onward</small></article><article><span>Model tokens</span><strong>{run.inputTokens + run.outputTokens}</strong><small>{run.inputTokens} in · {run.outputTokens} out</small></article></section>
     {findings && <section className="app-panel view-evidence"><div className="panel-title"><div><span>VALIDATED OUTPUT</span><h2>{findings.summary}</h2></div><span className="status-pill">{findings.findings.length} findings</span></div>{findings.findings.map((finding, index) => <article className="audit-finding" key={index}><strong>{finding.title}</strong><p>{finding.detail}</p><small>{finding.action} · confidence {Math.round(finding.confidence * 100)}%</small><div className="finding-evidence">{finding.evidenceRefs.map((reference) => <code key={reference}>{reference}</code>)}</div></article>)}</section>}
     <section className="app-panel view-evidence"><div className="panel-title"><div><span>CITED EVIDENCE</span><h2>Facts used by material claims</h2></div><span className="status-pill">{citedCount} cited records</span></div>
+      {images.map((item) => <article className="evidence-row" key={item.evidenceId}><div><strong>{item.label}</strong><small>{item.evidenceId}</small></div><span>{item.mimeType} · {imageRetentionLabel}</span><b>{Math.max(1, Math.ceil(item.byteSize / 1024))} {imageSizeUnit}</b><em>{visualEvidenceLabel}</em></article>)}
       {missions.map((item) => <article className="evidence-row" key={item.evidenceId}><div><strong>{item.productName || 'Removed product'} · {item.title}</strong><small>{item.evidenceId}</small></div><span>{item.metric} · {item.source} · due {item.dueAt.slice(0, 10)} · {item.limitation}</span><b>{item.latestValue === null ? '—' : item.latestValue} / {item.targetValue}</b><em>{item.assessment} · {item.progressPercent.toFixed(1)}%</em></article>)}
       {goals.map((item) => <article className="evidence-row" key={item.evidenceId}><div><strong>{item.productName} · {item.name}</strong><small>{item.evidenceId}</small></div><span>{item.metric}{item.source ? ` · ${item.source}` : ''}{item.currency ? ` · ${item.currency.toUpperCase()}` : ''} · rolling {item.period} · {item.periodStart}–{item.periodEnd}</span><b>{item.currentValue === null ? '—' : item.currentValue} / {item.targetValue}</b><em>{item.status}{item.progressPercent === null ? '' : ` · ${item.progressPercent.toFixed(1)}%`}</em></article>)}
       {crossSignals.map((item) => <article className="evidence-row" key={item.evidenceId}><div><strong>{item.productName}</strong><small>{item.evidenceId}</small></div><span>{item.left.source}.{item.left.metric} {signed(item.left.changePercent)} · {item.right.source}.{item.right.metric} {signed(item.right.changePercent)} · {item.caution}</span><b>{item.pattern.replace('_', ' ')}</b><em>relationship</em></article>)}

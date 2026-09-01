@@ -18,9 +18,9 @@ Dashloom Community 是一个自托管的数据与 AI 工作台：把产品、收
 
 - 按产品隔离数据、目标、竞品、看板、行动和 Growth Mission。
 - 独立开发者、SaaS 收入、SEO 增长、基础设施运维和客户报告五类智能视图。
-- BYOK Agent 对话、Executive Brief、模型对比、任务历史，以及可点回原始数据的引用。
+- 支持截图输入、真实执行轨迹和可读证据推理摘要的 BYOK Agent 对话，以及 Executive Brief、模型对比、任务历史和可点回原始数据的引用。
 - 使用确定性周期比较发现变化的信号雷达；关联信号不会被表述为因果关系。
-- Google Analytics/Search Console、Bing Webmaster、Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle、Cloudflare Workers/R2/Pages/Queues、GitHub、Vercel 和 Custom REST 连接器。
+- Google Analytics/Search Console、Bing Webmaster、支持自动识别字段的 Cloudflare D1 业务聚合、Stripe、Lemon Squeezy、Creem、Polar、Paddle、Cloudflare Workers/R2/Pages/Queues、GitHub、Vercel 和 Custom REST 连接器。
 - 手动导入、摄取 API Key、计算指标、定时同步和本地报告。
 - 部署级中英文界面选择，以及按任务分组的标签页工作流。
 - Connector/Agent Skill SDK、社区扩展审核、审计历史和可迁移数据导出。

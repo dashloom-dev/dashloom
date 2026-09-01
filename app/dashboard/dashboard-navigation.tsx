@@ -2,7 +2,7 @@
 
 import Link, { useLinkStatus } from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   BarChart3, Bot, Boxes, Cable, ChartNoAxesCombined, ChevronDown, Clock3, Gauge,
   Layers3, LayoutDashboard, ListChecks, Plus, RadioTower, Rocket, Settings, Store, Target,
@@ -47,9 +47,7 @@ function NavigationPending({ zh }: { zh: boolean }) {
 }
 
 function NavigationLink({ href, className, current, zh, children }: { href: string; className?: string; current: boolean; zh: boolean; children: ReactNode }) {
-  const [prefetch, setPrefetch] = useState<true | null>(null);
-  const prime = () => setPrefetch(true);
-  return <Link className={className} aria-current={current ? 'page' : undefined} href={href} prefetch={prefetch} onMouseEnter={prime} onFocus={prime} onTouchStart={prime}>{children}<NavigationPending zh={zh} /></Link>;
+  return <Link className={className} aria-current={current ? 'page' : undefined} href={href}>{children}<NavigationPending zh={zh} /></Link>;
 }
 
 export function DashboardNavigation({ locale }: { locale: 'en' | 'zh' }) {

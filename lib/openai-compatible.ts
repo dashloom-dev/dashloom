@@ -1,4 +1,5 @@
 import { AgentOutputFormatError } from './agent-output.ts';
+import type { AgentImageInput } from './agent-images.ts';
 
 export const compatibilityModes = ['auto', 'standard_openai', 'model_endpoint'] as const;
 export type CompatibilityMode = typeof compatibilityModes[number];
@@ -132,9 +133,10 @@ function profileProperties(profile: CompatibilityProfile) { return { includeMode
 export function inferredCompatibility(baseUrl: string): ProviderCompatibility { const url = new URL(baseUrl); const modelEndpoint = url.hostname === 'api.kie.ai'; return { version: 1, profile: modelEndpoint ? 'model_endpoint_stream' : 'standard_stream', validatedAt: '' }; }
 export function parseProviderCompatibility(value: string | null | undefined, baseUrl: string): ProviderCompatibility { try { const parsed = JSON.parse(value || '{}') as Partial<ProviderCompatibility>; if (parsed.version === 1 && compatibilityProfiles.includes(parsed.profile as CompatibilityProfile)) return { version: 1, profile: parsed.profile as CompatibilityProfile, validatedAt: typeof parsed.validatedAt === 'string' ? parsed.validatedAt : '' }; } catch { /* Existing records are inferred until revalidated. */ } return inferredCompatibility(baseUrl); }
 
-export async function invokeOpenAiCompatible(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; profile: CompatibilityProfile; abortSignal?: AbortSignal; timeoutMs?: number }) {
+export async function invokeOpenAiCompatible(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; profile: CompatibilityProfile; abortSignal?: AbortSignal; timeoutMs?: number }) {
   const { includeModel, stream } = profileProperties(input.profile); const signals = [AbortSignal.timeout(input.timeoutMs ?? 60_000), input.abortSignal].filter((signal): signal is AbortSignal => Boolean(signal));
-  const body: Record<string, unknown> = { messages: [{ role: 'system', content: input.system }, { role: 'user', content: input.prompt }], stream }; if (includeModel) body.model = input.model;
+  const userContent = input.images?.length ? [{ type: 'text', text: input.prompt }, ...input.images.map((image) => ({ type: 'image_url', image_url: { url: image.dataUrl, detail: 'high' } }))] : input.prompt;
+  const body: Record<string, unknown> = { messages: [{ role: 'system', content: input.system }, { role: 'user', content: userContent }], stream }; if (includeModel) body.model = input.model;
   const response = await fetch(`${input.baseUrl.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { authorization: `Bearer ${input.apiKey}`, accept: stream ? 'text/event-stream, application/json' : 'application/json', 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'manual', signal: signals.length === 1 ? signals[0] : AbortSignal.any(signals) });
   if (response.status >= 300 && response.status < 400) throw new OpenAiCompatibleRequestError(response.status);
   const responseBody = await response.text();
@@ -146,7 +148,7 @@ export function compatibleProfileCandidates(mode: CompatibilityMode, baseUrl: st
 function shouldStopProbe(error: unknown) { return error instanceof OpenAiCompatibleRequestError && ([401, 403, 429].includes(error.statusCode) || error.statusCode >= 500); }
 export async function detectOpenAiCompatibility(input: { baseUrl: string; apiKey: string; model: string; mode: CompatibilityMode; abortSignal?: AbortSignal }) { let lastError: unknown = new Error('No compatible request profile was accepted.'); for (const profile of compatibleProfileCandidates(input.mode, input.baseUrl)) { try { await invokeOpenAiCompatible({ ...input, profile, system: 'Return only OK.', prompt: 'Reply with OK.', timeoutMs: 12_000 }); return { version: 1, profile, validatedAt: new Date().toISOString() } satisfies ProviderCompatibility; } catch (error) { lastError = error; if (shouldStopProbe(error)) throw error; } } throw lastError; }
 
-export async function invokeOpenAiCompatibleWithFallback(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; preferredProfile: CompatibilityProfile; allowFallback: boolean; abortSignal?: AbortSignal }) {
+export async function invokeOpenAiCompatibleWithFallback(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; preferredProfile: CompatibilityProfile; allowFallback: boolean; abortSignal?: AbortSignal }) {
   const candidates = input.allowFallback ? [input.preferredProfile, ...compatibleProfileCandidates('auto', input.baseUrl).filter((profile) => profile !== input.preferredProfile)] : [input.preferredProfile];
   let lastError: unknown = new Error('No compatible request profile was accepted.');
   for (const profile of candidates) {

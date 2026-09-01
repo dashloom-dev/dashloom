@@ -1,7 +1,8 @@
 import { AgentOutputFormatError } from './agent-output.ts';
+import { AgentImageValidationError, AgentVisionUnsupportedError } from './agent-images.ts';
 
 export type AgentFailure = {
-  code: 'ANALYSIS_CANCELLED' | 'PROVIDER_OUTPUT_INVALID' | 'PROVIDER_AUTH_FAILED' | 'PROVIDER_REQUEST_REJECTED' | 'PROVIDER_ENDPOINT_NOT_FOUND' | 'PROVIDER_RATE_LIMITED' | 'PROVIDER_TIMEOUT' | 'PROVIDER_UNAVAILABLE' | 'ANALYSIS_FAILED';
+  code: 'ANALYSIS_CANCELLED' | 'IMAGE_INPUT_INVALID' | 'PROVIDER_VISION_UNSUPPORTED' | 'PROVIDER_OUTPUT_INVALID' | 'PROVIDER_AUTH_FAILED' | 'PROVIDER_REQUEST_REJECTED' | 'PROVIDER_ENDPOINT_NOT_FOUND' | 'PROVIDER_RATE_LIMITED' | 'PROVIDER_TIMEOUT' | 'PROVIDER_UNAVAILABLE' | 'ANALYSIS_FAILED';
   message: string;
   httpStatus: number;
   providerStatus: number | null;
@@ -15,6 +16,8 @@ function providerStatus(error: unknown) {
 
 export function classifyAgentFailure(error: unknown): AgentFailure {
   if (error instanceof Error && error.name === 'AbortError') return { code: 'ANALYSIS_CANCELLED', message: 'Analysis stopped.', httpStatus: 499, providerStatus: null };
+  if (error instanceof AgentImageValidationError) return { code: error.code, message: error.message, httpStatus: 400, providerStatus: null };
+  if (error instanceof AgentVisionUnsupportedError) return { code: error.code, message: error.message, httpStatus: 422, providerStatus: error.statusCode };
   if (error instanceof AgentOutputFormatError) return { code: error.code, message: error.message, httpStatus: 502, providerStatus: null };
 
   const status = providerStatus(error);

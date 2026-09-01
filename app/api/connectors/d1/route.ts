@@ -5,7 +5,9 @@ import { getDb } from '@/db';
 import { connectorAccounts, productConnectorMappings, products } from '@/db/schema';
 import { createAuth } from '@/lib/auth';
 import { encryptSecret } from '@/lib/crypto';
-import { validateD1Credentials, validateReadOnlyQuery } from '@/lib/d1-connector';
+import { discoverD1BusinessData, validateD1Credentials, validateReadOnlyQuery } from '@/lib/d1-connector';
+import { validateGuidedMappings } from '@/lib/business-data-discovery';
+import { buildGuidedD1Configuration } from '@/lib/d1-query';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 
 const input = z.object({
@@ -14,9 +16,21 @@ const input = z.object({
   databaseId: z.string().uuid(),
   apiToken: z.string().trim().min(20).max(500),
   productId: z.string().uuid(),
-  sql: z.string().trim().min(10).max(8000),
-  dateColumn: z.string().trim().min(1).max(80),
-  metrics: z.record(z.string(), z.string()),
+  sql: z.string().trim().min(10).max(8000).optional(),
+  dateColumn: z.string().trim().min(1).max(80).optional(),
+  metrics: z.record(z.string(), z.string()).optional(),
+  currency: z.string().trim().regex(/^[A-Za-z]{3}$/).optional().default('USD'),
+  guidedMappings: z.array(z.object({
+    metric: z.enum(['revenue', 'orders', 'signups', 'active_subscriptions']),
+    resource: z.string().trim().min(1).max(128),
+    valueColumn: z.string().trim().min(1).max(128),
+    dateColumn: z.string().trim().min(1).max(128).optional(),
+    filterColumn: z.string().trim().min(1).max(128).optional(),
+    filterValues: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+    scale: z.number().optional(),
+    confidence: z.enum(['high', 'medium', 'low']),
+    reason: z.string().trim().min(3).max(260),
+  })).min(1).max(4).optional(),
 });
 
 export async function POST(request: Request) {
@@ -31,8 +45,15 @@ export async function POST(request: Request) {
   if (!product) return NextResponse.json({ error: 'Product not found in this workspace' }, { status: 404 });
   let configuration;
   try {
-    configuration = validateReadOnlyQuery({ sql: parsed.data.sql, dateColumn: parsed.data.dateColumn, metrics: parsed.data.metrics });
-    await validateD1Credentials({ accountId: parsed.data.accountId, databaseId: parsed.data.databaseId, apiToken: parsed.data.apiToken });
+    const credentials = { accountId: parsed.data.accountId, databaseId: parsed.data.databaseId, apiToken: parsed.data.apiToken };
+    if (parsed.data.guidedMappings?.length) {
+      const discovery = await discoverD1BusinessData(credentials);
+      configuration = buildGuidedD1Configuration(validateGuidedMappings(discovery.resources, parsed.data.guidedMappings), parsed.data.currency);
+    } else {
+      if (!parsed.data.sql || !parsed.data.dateColumn || !parsed.data.metrics) throw new Error('Complete guided discovery or provide the advanced SQL mapping.');
+      configuration = validateReadOnlyQuery({ sql: parsed.data.sql, dateColumn: parsed.data.dateColumn, metrics: parsed.data.metrics });
+      await validateD1Credentials(credentials);
+    }
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'D1 validation failed' }, { status: 422 });
   }
