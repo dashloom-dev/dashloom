@@ -10,6 +10,7 @@ export function agentSpecialistDomains(preset: SpecialistPreset) { return [...(s
 
 export function agentMetricAllowed(preset: SpecialistPreset, allowedMetrics: readonly string[], metric: string, domain: string | null) {
   if (preset === 'operations_analyst' && metric.startsWith('queue_')) return true;
-  if (!allowedMetrics.length || allowedMetrics.includes(metric)) return true;
+  const baseMetric = metric.replace(/^(?:query|page)_/, '');
+  if (!allowedMetrics.length || allowedMetrics.includes(metric) || allowedMetrics.includes(baseMetric)) return true;
   return Boolean(domain && specialistDomains[preset]?.has(domain));
 }

@@ -14,3 +14,9 @@ test('specialists reject unrelated unknown metrics while broad agents keep them'
   assert.equal(agentMetricAllowed('portfolio_analyst', [], 'activation_depth', 'product'), true);
   assert.equal(agentMetricAllowed('client_reporting_analyst', [], 'custom_kpi', null), true);
 });
+
+test('SEO specialists receive query and page breakdown metrics', () => {
+  assert.equal(agentMetricAllowed('seo_growth_analyst', ['clicks', 'impressions', 'position'], 'query_clicks', null), true);
+  assert.equal(agentMetricAllowed('seo_growth_analyst', ['clicks', 'impressions', 'position'], 'page_impressions', null), true);
+  assert.equal(agentMetricAllowed('seo_growth_analyst', ['clicks', 'impressions', 'position'], 'query_position', null), true);
+});

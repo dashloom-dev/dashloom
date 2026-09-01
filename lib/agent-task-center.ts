@@ -6,14 +6,14 @@ export type AgentTaskRetry = {
   reason: string;
 };
 
+export function normalizeAnalysisRequestQuestion(value: unknown) {
+  const question = typeof value === 'string' ? value.trim() : '';
+  return question.length >= 3 && question.length <= 1000 ? question : null;
+}
+
 export function parseAnalysisRequestQuestion(evidenceJson: string) {
-  try {
-    const parsed = JSON.parse(evidenceJson) as { request?: { question?: unknown } };
-    const question = typeof parsed.request?.question === 'string' ? parsed.request.question.trim() : '';
-    return question.length >= 3 && question.length <= 1000 ? question : null;
-  } catch {
-    return null;
-  }
+  try { return normalizeAnalysisRequestQuestion((JSON.parse(evidenceJson) as { request?: { question?: unknown } }).request?.question); }
+  catch { return null; }
 }
 
 export function agentTaskRetry(input: {

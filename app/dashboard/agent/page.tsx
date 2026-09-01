@@ -5,7 +5,7 @@ import { requireServerSession } from '@/lib/session';
 import { getDeploymentLocale } from '@/lib/deployment-locale';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { agentDefinitions, type AgentPreset } from '@/lib/agent-catalog';
-import { getWorkspaceAgentReadiness, getWorkspaceAgentReadinessByProduct } from '@/lib/agent-readiness';
+import { getWorkspaceAgentReadinessSnapshot } from '@/lib/agent-readiness';
 import { AgentForm } from './agent-form';
 import { ConversationList } from './conversation-list';
 import { ComparisonForm } from './comparison-form';
@@ -26,9 +26,9 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
   const { user } = await requireServerSession();
   const workspace = await getPrimaryWorkspace(user.id);
   const query = await searchParams;
-  const [productRows, readiness, profiles, providers, runs, conversations, comparisons, goalCount, missionCount, executiveBriefs, briefCapacity] = workspace ? await Promise.all([
+  const [productRows, readinessSnapshot, profiles, providers, runs, conversations, comparisons, goalCount, missionCount, executiveBriefs, briefCapacity] = workspace ? await Promise.all([
     getDb().select({ id: products.id, name: products.name }).from(products).where(eq(products.workspaceId, workspace.id)).orderBy(asc(products.name)),
-    getWorkspaceAgentReadiness(workspace.id),
+    getWorkspaceAgentReadinessSnapshot(workspace.id),
     getDb().select().from(agentProfiles).where(eq(agentProfiles.workspaceId, workspace.id)),
     getDb().select().from(aiProviderAccounts).where(eq(aiProviderAccounts.workspaceId, workspace.id)),
     getDb().select().from(analysisRuns).where(query.conversation ? and(eq(analysisRuns.workspaceId, workspace.id), eq(analysisRuns.conversationId, query.conversation)) : eq(analysisRuns.workspaceId, workspace.id)).orderBy(desc(analysisRuns.createdAt)).limit(20),
@@ -40,6 +40,8 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
     executiveBriefCapacity(workspace.id),
   ]) : [[], null, [], [], [], [], [], [{ value: 0 }], [{ value: 0 }], [], { mode: 'byok', capacity: 0, remaining: null, ready: false }];
 
+  const readiness = readinessSnapshot?.workspace || null;
+  const readinessByProduct = readinessSnapshot?.byProduct || {};
   const modelReady = providers.some((item) => item.status === 'connected' && item.mode === 'byok');
   const canAnalyze = Boolean(workspace && ['owner', 'admin', 'member'].includes(workspace.role));
   const canManage = Boolean(workspace && ['owner', 'admin'].includes(workspace.role));
@@ -48,8 +50,7 @@ export default async function AgentPage({ searchParams }: { searchParams: Promis
   const profileNames = new Map(profiles.map((profile) => [profile.id, profile.name]));
   const selectedConversation = conversations.find((conversation) => conversation.id === query.conversation);
   const selectedScope: AgentProductScope = selectedConversation ? { mode: selectedConversation.scopeMode, productId: selectedConversation.productId } : { mode: 'workspace', productId: null };
-  const readinessByProduct = workspace ? await getWorkspaceAgentReadinessByProduct(workspace.id, productRows.map((product) => product.id)) : {};
-  const scopedReadiness = selectedScope.mode === 'product' && selectedScope.productId ? readinessByProduct[selectedScope.productId] || readiness : readiness;
+  const scopedReadiness = selectedScope.mode === 'product' && selectedScope.productId ? readinessByProduct[selectedScope.productId] : readiness;
   const selectedScopeLabel = agentScopeLabel(selectedScope, productRows);
   const conversationsWithScope = conversations.map((conversation) => ({ ...conversation, scopeLabel: agentScopeLabel({ mode: conversation.scopeMode, productId: conversation.productId }, productRows) }));
   const selectedPreset = selectedConversation?.agentPreset || (agentPresets.includes(query.preset as AgentPreset) ? query.preset as AgentPreset : 'portfolio_analyst');

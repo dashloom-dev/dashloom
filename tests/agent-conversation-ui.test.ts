@@ -21,6 +21,9 @@ test('Agent conversation UI keeps history inside the page and guards active runs
   assert.match(form, /stream: true/);
   assert.match(form, /AbortController/);
   assert.match(form, /Shift \+ Enter/);
+  assert.match(form, /requestAnimationFrame/);
+  assert.match(form, /startsNewConversation/);
+  assert.match(form, /Changing scope creates a new conversation/);
 
   assert.match(route, /application\/x-ndjson/);
   assert.match(route, /type: 'progress'/);

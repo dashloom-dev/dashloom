@@ -21,3 +21,9 @@ test('agent validation requires disclosure when evidence collection is truncated
   assert.throws(() => validateAgentCitations({ findings: [{ title: 'Revenue moved', detail: 'Revenue declined.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated), /disclosed as incomplete/);
   assert.doesNotThrow(() => validateAgentCitations({ findings: [{ title: 'Partial evidence', detail: 'Coverage is incomplete because the evidence limit was reached.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated));
 });
+
+test('agent validation also requires disclosure when granular breakdowns are truncated', () => {
+  const truncated = { ...evidence, truncated: { breakdowns: true } };
+  assert.throws(() => validateAgentCitations({ findings: [{ title: 'Search changed', detail: 'Queries moved.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated), /disclosed as incomplete/);
+  assert.doesNotThrow(() => validateAgentCitations({ findings: [{ title: 'Partial search evidence', detail: 'Query coverage is incomplete.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated));
+});
