@@ -1,18 +1,32 @@
-# Product data coverage
+# Understand a product's data status
 
-The **Products** page is the source of truth for whether a Dashloom product is actually connected. Creating a product does not imply that a provider is mapped, and configuring an account does not imply that a successful synchronization has written evidence.
+Each card on **Products** tells you whether data is connected, when it was last updated, and which Agents can use it. Start here when an Agent is unavailable or a product looks out of date.
 
-Each product card combines workspace-scoped connector mappings with stored metric aggregates. It reports source and metric-series counts, stored point count, latest evidence date, and the five specialist Agents that have matching evidence in their current 14-day interactive window. Competitor points count only when the competitor is explicitly attached to that product and its metric satisfies the same specialist policy.
+## The four product states
 
-## Coverage states
+- **live:** at least one source wrote data during the last three UTC calendar days;
+- **stale:** historical data exists, but nothing has updated during the last three days;
+- **awaiting sync:** a healthy source is mapped to the product, but no metrics have been imported yet;
+- **not connected:** the product has no source mapping and no imported metrics.
 
-- **live:** at least one source wrote evidence within the last three UTC calendar days;
-- **stale:** historical evidence exists, but no source is fresh within three days;
-- **awaiting sync:** a connected, enabled mapping exists but has not written a metric point;
-- **not connected:** the product has neither a mapping nor imported metric evidence.
+A source can also show **attention** when its account is unfinished, disabled, or needs repair.
 
-Individual source chips may also show **attention** when a mapping exists but its account is pending, disabled, or needs repair. Evidence imported through the normalized API or manual import remains visible even when it has no connector mapping; freshness still comes from the stored metric date.
+## Fix a product that is not live
 
-All queries include the active workspace boundary. The page reads aggregated evidence and never exposes connector credentials. It does not add sample products or demo metrics to a user workspace.
+1. Select **Fix data coverage** on the product card.
+2. Check that the source account is enabled, its credential is valid, and the correct resource is mapped to this product.
+3. Run a manual sync.
+4. Return to **Products** and confirm that the data-point count and latest date changed.
+5. Open Agent again and check that the matching analyst is now available.
 
-Use **Fix data coverage** to open Data sources, repair the account or mapping, run synchronization, and then return to Products to confirm a real evidence date. An Agent is enabled only after its own matching evidence is present; unrelated high-volume metrics cannot make another specialist appear ready.
+## Why “connected” is not enough
+
+Saving a token or completing OAuth only gives Dashloom permission to read. The system cannot analyze anything until a sync writes metrics, so the status uses saved data dates instead of setup clicks.
+
+The card also shows source count, metric-series count, data-point count, and available Agents. Data pushed through the Metrics API or imported manually still counts even when it has no connector account.
+
+## Why only some Agents are available
+
+Each Agent uses data that matches its job. Revenue needs revenue metrics, SEO needs search data, and Operations needs runtime or deployment data. A large volume of unrelated metrics does not enable every Agent.
+
+Every query is limited to the current workspace and product. The status page reads aggregated metrics only; it does not expose connector secrets or add demo products.

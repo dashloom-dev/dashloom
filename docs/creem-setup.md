@@ -1,6 +1,6 @@
 # Creem revenue setup
 
-Dashloom imports privacy-minimized commercial evidence from Creem for Revenue Agent analysis and recurring reports. It stores daily gross paid revenue, refunds, paid transaction counts, and chargeback counts by currency. It does not store customer IDs, names, email addresses, descriptions, tax countries, metadata, orders, or subscription identifiers.
+Dashloom imports privacy-minimized revenue data from Creem for Revenue Agent analysis and recurring reports. It stores daily gross paid revenue, refunds, paid transaction counts, and chargeback counts by currency. It does not store customer IDs, names, email addresses, descriptions, tax countries, metadata, orders, or subscription identifiers.
 
 ## Create the connection
 

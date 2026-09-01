@@ -5,7 +5,7 @@ Dashloom's Agent Quality Lab compares two to four connected OpenAI-compatible pr
 ## Run a comparison
 
 1. Connect at least two validated providers under **Settings → Bring your own model**. Owners and admins can disable a provider at any time; disabling permanently removes its stored encrypted credential while preserving historical result snapshots.
-2. Synchronize real product evidence.
+2. Synchronize real product data.
 3. Open **Agent → Agent Quality Lab**.
 4. Choose an analyst, select two to four providers, enter one decision question, and run the comparison.
 
@@ -15,7 +15,7 @@ Each selected provider receives the same bounded evidence and question. Provider
 
 Every comparison stores:
 
-- the frozen evidence bundle and exact comparison periods;
+- the saved data snapshot for that run and exact comparison periods;
 - Agent preset, question, prompt version, and frozen Agent Skill versions and instruction hashes;
 - provider display-name, mode, and model snapshots, without exposing API keys;
 - only schema-valid and citation-valid findings;

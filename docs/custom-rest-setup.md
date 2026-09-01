@@ -68,7 +68,7 @@ The connector validates public DNS before every call, rejects private and reserv
 5. Select **Sync Custom REST** to write the first real metric points.
 6. Under **Automatic synchronization**, select **Custom REST metrics** and a frequency allowed by the workspace plan.
 
-Each endpoint is mapped to one product at connection time, and a product may use multiple endpoints. Metric identity includes the connection fingerprint, so two custom sources cannot overwrite each other accidentally. Disable removes the stored credential while retaining historical metric evidence. Successful values flow through the same dashboard, calculated-metric, alert, report, and Agent evidence layers as built-in connectors.
+Each endpoint is mapped to one product at connection time, and a product may use multiple endpoints. Metric identity includes the connection fingerprint, so two custom sources cannot overwrite each other accidentally. Disable removes the stored credential while retaining historical metric data. Successful values flow through the same dashboard, calculated-metric, alert, report, and Agent evidence layers as built-in connectors.
 
 ## Troubleshooting
 

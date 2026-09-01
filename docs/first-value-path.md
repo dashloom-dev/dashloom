@@ -1,29 +1,57 @@
-# First value path
+# Quick start: from an empty workspace to your first analysis
 
-Dashloom's workspace overview turns activation into a visible, evidence-backed path. It does not use onboarding flags, seeded products, or demo metrics. Every completed milestone is derived from the current workspace database.
+To get value from Dashloom, do three things: add a product, import one real data source, and ask an Agent a specific question. If you already have a read-only credential, this should take only a few minutes.
 
-## New workspace guide
+## Before you start
 
-Before the first successful analysis, the overview shows only the three steps needed to reach an initial useful answer:
+Choose the data source that is easiest for you to connect. Common starting points are Cloudflare, Google Analytics, Stripe, GitHub, or Vercel. You will need a read-only token or an OAuth authorization for that provider.
 
-1. **Create a product.** Add the real product Dashloom should understand.
-2. **Connect real data.** A saved connection is not enough; the step completes only after recent metric evidence exists. If a source is connected but has not written data, the guide asks the user to run the first sync.
-3. **See the first analysis.** If evidence exists but no model is ready, the guide routes through model setup. Otherwise it opens the Agent to produce an evidence-linked analysis.
+A new Dashloom workspace is empty by design. Dashloom does not add sample products or made-up metrics.
 
-After the first successful analysis, the compact guide is replaced by the full operating-loop milestones below.
+## Step 1: add a product
 
-## Milestones
+1. Open **Products**.
+2. Create a product with its real name and domain.
+3. After saving, the product card shows **not connected** and points you to data sources.
 
-1. **Add a real product.** At least one active product exists.
-2. **Map or import a source.** An enabled mapping belongs to a connected provider account, or recent authenticated ingestion has already created evidence.
-3. **Collect recent evidence.** At least one metric point is dated within the last 14 days.
-4. **Enable an AI model.** A connected BYOK provider exists, or the workspace has a managed allowance and the deployment has a managed model configured. Owners and administrators can complete BYOK setup directly from the Agent page; a provider that fails the `/models` validation remains unavailable instead of silently enabling analysis.
-5. **Run the Agent.** At least one evidence-linked analysis completed successfully.
-6. **Plan an Agent action.** A suggested finding was moved to planned, in progress, or done. Merely generating or dismissing a suggestion does not count.
-7. **Schedule the loop.** At least one daily, weekly, or monthly report schedule is enabled.
+Use one product for one business or customer scope. Do not mix unrelated businesses, customers, or currencies in a single product.
 
-The earliest incomplete milestone is the recommended next step. Later milestones may still show as complete when real evidence proves that the user finished them out of order.
+## Step 2: connect and sync data
 
-## Why it is strict
+1. Select **Fix data coverage** on the product card, or open **Data sources**.
+2. Choose the provider you use and follow its setup guide to create the smallest required permission set.
+3. Map the provider account or resource to the product you just created.
+4. Select **Sync** and wait for the run to finish.
+5. Return to **Products** and confirm that the card shows a data-point count and a recent data date.
 
-The path measures an operating loop, not account setup activity. A saved credential is not data, an LLM response is not evidence, and a generated recommendation is not execution. Community deployments never mix fictional data into a real workspace.
+A connected account is not the same as imported data. This step is complete only after a successful sync writes real metrics.
+
+## Step 3: run your first analysis
+
+1. Open **Agent**.
+2. Choose an analyst that matches your data, such as Revenue, SEO, or Operations.
+3. Select the product you created.
+4. Ask a decision-oriented question, for example: “What should I address first based on the last seven days?”
+5. Open the data links in the answer and confirm that the product, metrics, and dates are correct.
+
+If an Agent is unavailable, the page tells you which kind of data is missing. Return to the data source and complete a sync instead of connecting unrelated metrics just to enable the button.
+
+## How to verify the setup
+
+You should now see:
+
+- a **live** product card with a recent data date;
+- a matching data-point count on the Agent page;
+- at least one successful analysis whose conclusions link back to data;
+- a follow-up item under **Agent actions**.
+
+## What to do next
+
+A useful next sequence is:
+
+1. create an automatic sync schedule for your main data source;
+2. move one Agent action to planned and assign an owner;
+3. schedule a weekly report that compares the same time window every week;
+4. connect a second data category, such as revenue next to traffic or errors next to deployments.
+
+The home page later tracks seven milestones: product, source mapping, recent data, AI model, Agent analysis, planned action, and recurring report. These are calculated from real data and completed work; they are not tutorial checkboxes.

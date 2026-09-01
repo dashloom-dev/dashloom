@@ -25,10 +25,10 @@ Valid metric names cited by the findings are placed first, followed by safe temp
 
 ## Evidence behavior
 
-The Agent briefing is a stored conclusion tied to the exact successful analysis run. Its finding cards preserve confidence, next action, and evidence references. The metric cards and evidence table continue to read current normalized workspace evidence, so users can distinguish a historical conclusion from live movement.
+The Agent briefing is a stored conclusion tied to the exact successful analysis run. Its finding cards preserve confidence, next action, and data references. The metric cards and evidence table continue to read current normalized workspace evidence, so users can distinguish a historical conclusion from live movement.
 
 The **Inspect frozen evidence** link opens the immutable analysis snapshot used by the model. If retention later removes that analysis, the ordinary dashboard remains usable but no longer displays the Agent briefing.
 
 ## Sharing boundary
 
-Private dashboard links expose only the selected product scope, selected normalized metrics, and current metric evidence. They intentionally exclude the internal Agent briefing because its natural-language summary may mention workspace context outside the saved metric scope. Use a client report when a reviewed narrative must be delivered externally.
+Private dashboard links expose only the selected product scope, selected normalized metrics, and current metric data. They intentionally exclude the internal Agent briefing because its natural-language summary may mention workspace context outside the saved metric scope. Use a client report when a reviewed narrative must be delivered externally.

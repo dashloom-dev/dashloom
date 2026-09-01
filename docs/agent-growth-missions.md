@@ -1,6 +1,6 @@
 # Agent Growth Missions
 
-Growth Missions turn an evidence-linked Agent recommendation into measurable, approved work. Each mission freezes one product, metric, source, currency, baseline date, baseline value, target, owner, and deadline. Later product evidence updates progress without spending another AI run.
+Growth Missions turn an evidence-linked Agent recommendation into measurable, approved work. Each mission freezes one product, metric, source, currency, baseline date, baseline value, target, owner, and deadline. Later product data updates progress without spending another AI run.
 
 ## Launch a mission
 

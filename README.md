@@ -4,30 +4,32 @@
 
 Website：https://dashloom.dev/
 
-Self-hosted AI product intelligence for teams that want one evidence layer across product analytics, revenue, acquisition, search, and business operations.
+Dashloom Community is a self-hosted workspace that brings product, revenue, acquisition, search, and operations data together, then helps your team decide what to do next.
 
-Dashloom Community normalizes operational signals, calculates deterministic metrics, and lets specialized Agents analyze the resulting evidence with your own OpenAI-compatible model. Your application, D1 or Supabase PostgreSQL database, provider credentials, schedules, and reports run in infrastructure you control.
+Connect the tools you already use, sync real metrics, and ask a specialist Agent a concrete question. Dashloom calculates comparable metrics before calling your own OpenAI-compatible model, and every important conclusion links back to the data used. The application, database, credentials, schedules, and reports all stay on infrastructure you control.
+
+To try it locally, go to [Local installation](#local-installation), then follow the [first-use tutorial](#first-use-tutorial). The rest of this README explains features, deployment choices, and production setup.
 
 ![Dashloom Community overview with fictional data](docs/images/readme/overview-en.png)
 
 > All screenshots use fictional products, identities, domains, and metrics. They are rendered with the real Community UI components and styles.
 
-## What is included
+## What you get
 
-- Product-scoped evidence, goals, competitors, dashboards, actions, and Growth Missions.
+- Product-scoped data, goals, competitors, dashboards, actions, and Growth Missions.
 - Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Infrastructure Operations, and Agency Client.
-- BYOK Agent conversations, Executive Briefs, model comparison, task history, and evidence citations.
+- BYOK Agent conversations, Executive Briefs, model comparison, task history, and links back to source data.
 - Signal Radar for deterministic period comparisons and cross-signal hypotheses without causal overclaiming.
 - Google Analytics/Search Console, Bing Webmaster, Cloudflare D1 business aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, Cloudflare Workers/R2/Pages/Queues, GitHub, Vercel, and Custom REST connectors.
-- Manual imports, open ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
+- Manual imports, ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
 - English or Simplified Chinese as a deployment-wide interface locale, plus focused tabbed workflows.
-- Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable evidence export.
+- Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable data export.
 
 Dashloom Community is a standalone open-source product. It has no source, package, runtime, database, deployment, Git, or build dependency on the private Dashloom Cloud repository.
 
-## Deployment methods and data sources are separate concerns
+## Choose where Dashloom runs, then choose what data to connect
 
-Dashloom Community runs on infrastructure you control. Choose a deployment target and application database first; after signing in, connect only the evidence sources you need. Deploying on a platform does not automatically authorize it as a Dashloom data source, but Cloudflare, GitHub, and Vercel can be connected separately with scoped read-only credentials.
+Dashloom Community runs on infrastructure you control. First choose a deployment target and application database. After signing in, connect only the data sources you need. Deploying on Cloudflare, Vercel, or AWS does not automatically give Dashloom access to platform data; connect Cloudflare, GitHub, or Vercel separately with scoped read-only credentials when you want to analyze them.
 
 ### Deployment paths
 
@@ -67,15 +69,15 @@ See the [Cloudflare deployment guide](docs/deployment-cloudflare.md) and [Vercel
 
 ## Product tour
 
-### Evidence-ranked Signal Radar
+### Signal Radar ranks changes before AI explains them
 
-Dashloom compares matching products, sources, metrics, currencies, and dimensions before promoting a change. Agent interpretation happens after deterministic ranking and keeps correlation separate from causation.
+Dashloom compares like with like—same product, source, metric, currency, and dimension—before highlighting a change. The Agent explains only after that calculation and does not present correlation as proof of cause.
 
 ![Dashloom Signal Radar with fictional data](docs/images/readme/signal-radar-en.png)
 
-### Products as data-isolation boundaries
+### Each product keeps its own data and work
 
-Each product owns its connector mappings, normalized metrics, goals, competitors, Agent evidence, actions, missions, and schedules. Coverage cards show what is actually connected and how fresh the evidence is.
+Each product keeps its own connector mappings, metrics, goals, competitors, Agent analyses, actions, missions, and schedules. Product cards show what is connected and when the data last updated.
 
 ![Dashloom product portfolio with fictional data](docs/images/readme/products-en.png)
 
@@ -181,7 +183,7 @@ Open [http://localhost:3000](http://localhost:3000), create the first local acco
 
 Open **Products**, then add the product name, public domain, and category. A product is the isolation boundary used by connector mappings, evidence, dashboards, Agent conversations, goals, and recurring jobs.
 
-### Step 2: connect or import evidence
+### Step 2: connect and sync data
 
 Open **Data sources** and choose one path:
 
@@ -192,7 +194,7 @@ Open **Data sources** and choose one path:
 - create a scoped ingestion key for the TypeScript SDK or Connector Worker;
 - connect a Custom REST endpoint that returns the validated aggregate metric contract.
 
-After synchronization, check the product coverage card for source freshness, stored point count, and Agent readiness. Dashloom does not add demo evidence to a real workspace.
+After synchronization, return to the product card and confirm that it shows a data-point count and a recent date. A saved connection is not enough—the first sync must write real metrics. Dashloom never adds demo data to a real workspace.
 
 ### Step 3: connect your model
 
@@ -200,15 +202,15 @@ Open **Settings**, add an OpenAI-compatible BYOK provider, and select the model 
 
 Community Agent execution is BYOK-only. No managed model allowance or Dashloom subscription is required.
 
-### Step 4: ask an evidence-backed question
+### Step 4: ask a question you can act on
 
 Open **Dashloom Agent**, select a specialist and product scope, then ask a question such as:
 
 ```text
-Which material changes should we investigate this week, and which evidence supports each recommendation?
+What should we address first based on the last seven days, and which data supports each recommendation?
 ```
 
-An Agent run freezes the evidence bundle used for the answer. Findings must cite evidence from that bundle and disclose truncation or missing coverage.
+Each run saves the exact data snapshot used for the answer. Important findings must link to that snapshot and disclose missing or truncated coverage.
 
 ### Step 5: operate the recurring loop
 
