@@ -8,6 +8,10 @@ const specialistDomains: Partial<Record<SpecialistPreset, ReadonlySet<string>>> 
 
 export function agentSpecialistDomains(preset: SpecialistPreset) { return [...(specialistDomains[preset] || [])]; }
 
+export function agentQueryableMetrics(allowedMetrics: readonly string[]) {
+  return [...new Set(allowedMetrics.flatMap((metric) => [metric, `query_${metric}`, `page_${metric}`]))];
+}
+
 export function agentMetricAllowed(preset: SpecialistPreset, allowedMetrics: readonly string[], metric: string, domain: string | null) {
   if (preset === 'operations_analyst' && metric.startsWith('queue_')) return true;
   const baseMetric = metric.replace(/^(?:query|page)_/, '');

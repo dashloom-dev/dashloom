@@ -4,6 +4,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AgentScopeReadiness, isAgentScopeReady } from '@/lib/agent-scope';
 import { translateDashboard } from '../dashboard-translations';
+import { agentBeforeNewConversationEvent } from './agent-conversation-pane';
 
 type Progress = { stage: string; label: string; detail: string };
 
@@ -55,9 +56,13 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       const link = (event.target as HTMLElement | null)?.closest('a[href]');
       if (link && !window.confirm(zh ? '离开当前页面会中断本次交流。确定离开吗？' : 'Leaving this page will interrupt this conversation. Leave anyway?')) event.preventDefault();
     };
+    const guardNewConversation = (event: Event) => {
+      if (!window.confirm(zh ? '新建对话会中断本次交流。确定新建吗？' : 'Starting a new conversation will interrupt this one. Continue?')) event.preventDefault();
+    };
     window.addEventListener('beforeunload', warn);
+    window.addEventListener(agentBeforeNewConversationEvent, guardNewConversation);
     document.addEventListener('click', guardLinks, true);
-    return () => { window.removeEventListener('beforeunload', warn); document.removeEventListener('click', guardLinks, true); };
+    return () => { window.removeEventListener('beforeunload', warn); window.removeEventListener(agentBeforeNewConversationEvent, guardNewConversation); document.removeEventListener('click', guardLinks, true); };
   }, [pending, zh]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,8 +102,8 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       }
       setMessage(zh ? '分析已完成，并连同证据快照保存。' : 'Analysis completed and stored with its evidence snapshot.');
       setQuestion('');
-      if (nextConversationId) router.push(`/dashboard/agent?conversation=${nextConversationId}`);
-      router.refresh();
+      if (nextConversationId && nextConversationId !== conversationId) router.push(`/dashboard/agent?conversation=${nextConversationId}`);
+      else router.refresh();
     } catch (error) {
       setMessage(error instanceof DOMException && error.name === 'AbortError' ? (zh ? '本次分析已停止。' : 'Analysis stopped.') : displayError(error, zh));
     } finally {

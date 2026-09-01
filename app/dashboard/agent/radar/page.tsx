@@ -49,7 +49,7 @@ export default async function AgentRadarPage() {
         <header><div><span>#{String(index + 1).padStart(2, '0')} · {signal.kind.replaceAll('_', ' ').toUpperCase()}</span><h2>{signal.title}</h2></div><b>{signal.tone}</b></header>
         <p>{signal.detail}</p>
         {signal.metric && <div className="radar-values"><span><small>{targetContext ? 'Target' : 'Previous'}</small><strong>{metricValue(signal.previousValue, signal.currency)}</strong></span><ArrowRight /><span><small>{signal.kind === 'mission' ? 'Latest' : 'Current'}</small><strong>{metricValue(signal.currentValue, signal.currency)}</strong></span>{signal.changePercent !== null && <em>{targetContext ? `${signal.changePercent.toFixed(1)}% progress` : `${signal.changePercent >= 0 ? '+' : ''}${signal.changePercent.toFixed(1)}%`}</em>}</div>}
-        <div className="radar-provenance"><span>{signal.productName}</span>{signal.source && <span>{signal.source}</span>}{signal.latestDate && <span>evidence {signal.latestDate}</span>}{signal.evidenceRefs.map((reference) => <code key={reference}>{reference}</code>)}</div>
+        <div className="radar-provenance"><span>{signal.productName}</span>{signal.source && <span>{signal.source}</span>}{signal.latestDate && <span>evidence {signal.latestDate}</span>}</div>
         <footer><div><strong><Bot size={16} /> {agentDefinitions[preset].name}</strong><small>{signal.limitation}{preset !== signal.preset ? ' The Portfolio Analyst is used because the preferred specialist is not ready.' : ''} Analysis is locked to {signal.productId ? 'this product' : 'the workspace'}.</small></div><RadarAnalyzeButton preset={preset} question={signal.question} productId={signal.productId} ready={ready} canAnalyze={canAnalyze} /></footer>
       </article>;
     })}</section>}

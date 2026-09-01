@@ -48,16 +48,35 @@ export function DashboardLanguage({ locale }: { locale: string }) {
     const activeLocale = locale;
     document.documentElement.lang = activeLocale === 'zh' ? 'zh-CN' : 'en';
     const root = document.querySelector('.product-app') as unknown as Node | null; if (!root) return;
-    translateSubtree(root, activeLocale);
+    if (activeLocale !== 'zh') return;
+    let observing = false;
+    const observe = () => {
+      if (observing) return;
+      observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+      observing = true;
+    };
+    const stopObserving = () => { if (observing) observer.disconnect(); observing = false; };
+    const translateWithoutSelfObservation = (nodes: Node[]) => {
+      stopObserving();
+      for (const node of nodes) translateSubtree(node, activeLocale);
+      observer.takeRecords();
+      observe();
+    };
     const observer = new MutationObserver((mutations) => {
+      const candidates = new Set<Node>();
       for (const mutation of mutations) {
-        if (mutation.type === 'characterData') translateSubtree(mutation.target, activeLocale);
-        else if (mutation.type === 'attributes' && mutation.target instanceof Element) translateAttributes(mutation.target, activeLocale);
-        else for (const node of mutation.addedNodes) translateSubtree(node, activeLocale);
+        if (mutation.type === 'characterData' || mutation.type === 'attributes') candidates.add(mutation.target);
+        else for (const node of mutation.addedNodes) candidates.add(node);
       }
+      const nodes = [...candidates].filter((node) => {
+        let parent = node.parentNode;
+        while (parent) { if (candidates.has(parent)) return false; parent = parent.parentNode; }
+        return true;
+      });
+      translateWithoutSelfObservation(nodes);
     });
-    observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
-    return () => { observer.disconnect(); };
+    translateWithoutSelfObservation([root]);
+    return stopObserving;
   }, [locale]);
   return null;
 }

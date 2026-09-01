@@ -17,6 +17,13 @@ test('marketplace distributes one reviewed skill for every built-in Agent specia
   }
 });
 
+test('built-in specialist skills use canonical metric names', () => {
+  const seo = marketplaceSkills.find((skill) => skill.manifest.slug === 'seo-content-opportunity')!.manifest;
+  const operations = marketplaceSkills.find((skill) => skill.manifest.slug === 'cloudflare-reliability-watch')!.manifest;
+  assert.deepEqual(seo.requiredMetrics, ['clicks', 'impressions', 'position']);
+  assert.deepEqual(operations.requiredMetrics, ['requests', 'errors', 'cpu_time_p99']);
+});
+
 test('marketplace lookup fails closed for unknown slugs', () => {
   assert.equal(findMarketplaceSkill('not-published'), null);
   assert.equal(findMarketplaceSkill('saas-unit-economics')?.manifest.version, '1.0.0');

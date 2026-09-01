@@ -31,12 +31,12 @@ export const marketplaceSkills: MarketplaceSkill[] = [
   {
     kind: 'agent_skill', slug: 'seo-content-opportunity', publisher: 'Dashloom', sourceUrl, review,
     summary: 'Finds search demand and ranking movements that deserve a concrete content or technical SEO action.',
-    manifest: agentSkillManifestSchema.parse({ slug: 'seo-content-opportunity', name: 'SEO Content Opportunity', version: '1.0.0', basePreset: 'seo_growth_analyst', requiredMetrics: ['gsc_clicks', 'gsc_impressions', 'gsc_position'], instructions: 'Prioritize material search visibility changes and opportunities supported by clicks, impressions, and position evidence. Separate observed movement from hypotheses about cause, and propose one measurable content or technical follow-up.' }),
+    manifest: agentSkillManifestSchema.parse({ slug: 'seo-content-opportunity', name: 'SEO Content Opportunity', version: '1.0.1', basePreset: 'seo_growth_analyst', requiredMetrics: ['clicks', 'impressions', 'position'], instructions: 'Prioritize material search visibility changes and opportunities supported by clicks, impressions, and position evidence. Separate observed movement from hypotheses about cause, and propose one measurable content or technical follow-up.' }),
   },
   {
     kind: 'agent_skill', slug: 'cloudflare-reliability-watch', publisher: 'Dashloom', sourceUrl, review,
     summary: 'Correlates customer-facing request, error, compute, database, and storage evidence without inventing causes.',
-    manifest: agentSkillManifestSchema.parse({ slug: 'cloudflare-reliability-watch', name: 'Cloudflare Reliability Watch', version: '1.1.0', basePreset: 'operations_analyst', requiredMetrics: ['requests', 'errors', 'cpu_time'], instructions: 'Prioritize customer-impacting reliability changes across request volume, error movement, compute pressure, database activity, and storage signals. Treat co-movement as non-causal and recommend a bounded verification step.' }),
+    manifest: agentSkillManifestSchema.parse({ slug: 'cloudflare-reliability-watch', name: 'Cloudflare Reliability Watch', version: '1.1.1', basePreset: 'operations_analyst', requiredMetrics: ['requests', 'errors', 'cpu_time_p99'], instructions: 'Prioritize customer-impacting reliability changes across request volume, error movement, compute pressure, database activity, and storage signals. Treat co-movement as non-causal and recommend a bounded verification step.' }),
   },
   {
     kind: 'agent_skill', slug: 'agency-executive-brief', publisher: 'Dashloom', sourceUrl, review,

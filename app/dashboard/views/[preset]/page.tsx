@@ -1,7 +1,7 @@
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, max } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { getDb } from '@/db';
-import { analysisRuns, dashboardViews, metricPoints, products, workspaces } from '@/db/schema';
+import { analysisRuns, dashboardViews, metricPoints, products } from '@/db/schema';
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { addRollupValue, finishRollup, metricRollup, type RollupAccumulator } from '@/lib/metric-rollup';
@@ -9,6 +9,7 @@ import { dashboardTemplates, parseDashboardConfiguration, type DashboardPreset }
 import { agentResultSchema } from '@/lib/agent';
 import { translateDashboard } from '../../dashboard-translations';
 import { getDeploymentLocale } from '@/lib/deployment-locale';
+import { dashboardComparisonWindow } from '@/lib/dashboard-period';
 
 type DashboardLocale = 'en' | 'zh';
 
@@ -22,25 +23,27 @@ export default async function IntelligenceViewPage({ params, searchParams }: { p
   const locale: DashboardLocale = getDeploymentLocale();
   const zh = locale === 'zh';
   const t = (value: string) => zh ? translateDashboard(value) : value;
-  const [dates] = await getDb().select({ start: sql<string>`date('now', '-13 days')`, split: sql<string>`date('now', '-6 days')` }).from(workspaces).where(eq(workspaces.id, workspace?.id || '')).limit(1);
-  if (!dates) return <div className="empty-state"><h1>{t('Workspace unavailable')}</h1><p>{t('The selected workspace could not be loaded.')}</p></div>;
+  if (!workspace) return <div className="empty-state"><h1>{t('Workspace unavailable')}</h1><p>{t('The selected workspace could not be loaded.')}</p></div>;
   const [savedView] = workspace ? await getDb().select().from(dashboardViews).where(query.view ? and(eq(dashboardViews.id, query.view), eq(dashboardViews.workspaceId, workspace.id), eq(dashboardViews.preset, requested as DashboardPreset)) : and(eq(dashboardViews.workspaceId, workspace.id), eq(dashboardViews.preset, requested as DashboardPreset), eq(dashboardViews.isDefault, true))).limit(1) : [];
   const configuration = savedView ? parseDashboardConfiguration(savedView.configurationJson) : {};
   const [sourceRun] = savedView?.sourceAnalysisRunId ? await getDb().select({ id: analysisRuns.id, findingsJson: analysisRuns.findingsJson, createdAt: analysisRuns.createdAt }).from(analysisRuns).where(and(eq(analysisRuns.id, savedView.sourceAnalysisRunId), eq(analysisRuns.workspaceId, workspace?.id || ''), eq(analysisRuns.status, 'success'))).limit(1) : [];
   const agentBriefing = sourceRun?.findingsJson ? parseAgentBriefing(sourceRun.findingsJson) : null;
   const definition = { ...template, title: configuration.title || savedView?.name || template.title, copy: configuration.copy || template.copy, metrics: configuration.metrics || [...template.metrics] };
-  const productFilter = savedView?.productId ? and(eq(products.workspaceId, workspace?.id || ''), eq(products.id, savedView.productId)) : eq(products.workspaceId, workspace?.id || '');
-  const [productRows, pointRows] = workspace ? await Promise.all([
+  const productFilter = savedView?.productId ? and(eq(products.workspaceId, workspace.id), eq(products.id, savedView.productId)) : eq(products.workspaceId, workspace.id);
+  const pointFilter = and(eq(metricPoints.workspaceId, workspace.id), savedView?.productId ? eq(metricPoints.productId, savedView.productId) : undefined, inArray(metricPoints.metric, definition.metrics));
+  const [productRows, [latestPoint]] = await Promise.all([
     getDb().select().from(products).where(productFilter).orderBy(products.name),
-    getDb().select().from(metricPoints).where(and(eq(metricPoints.workspaceId, workspace.id), gte(metricPoints.metricDate, dates.start))).orderBy(metricPoints.metricDate).limit(5000),
-  ]) : [[], []];
+    getDb().select({ metricDate: max(metricPoints.metricDate) }).from(metricPoints).where(pointFilter),
+  ]);
+  const dates = dashboardComparisonWindow(latestPoint?.metricDate);
+  const pointRows = dates ? await getDb().select().from(metricPoints).where(and(pointFilter, gte(metricPoints.metricDate, dates.start), lte(metricPoints.metricDate, dates.end))).orderBy(metricPoints.metricDate).limit(5000) : [];
   const byProduct = new Map(productRows.map((product) => [product.id, product]));
   const emptyRollup = (): RollupAccumulator => ({ sum: 0, count: 0, latestDate: '', latestValue: 0 });
   const aggregates = new Map<string, { metric: string; currency: string | null; current: RollupAccumulator; previous: RollupAccumulator }>();
   for (const point of pointRows.filter((point) => (!savedView?.productId || point.productId === savedView.productId) && (definition.metrics as readonly string[]).includes(point.metric))) {
     const currency = metricCurrency(point.dimensionsJson); const key = `${point.productId}:${point.metric}:${currency || ''}`;
     const aggregate = aggregates.get(key) || { metric: point.metric, currency, current: emptyRollup(), previous: emptyRollup() };
-    addRollupValue(point.metricDate >= dates.split ? aggregate.current : aggregate.previous, point.metricDate, point.value);
+    addRollupValue(point.metricDate >= dates!.split ? aggregate.current : aggregate.previous, point.metricDate, point.value);
     aggregates.set(key, aggregate);
   }
   const rows = [...aggregates].map(([key, value]) => { const [productId, metric] = key.split(':'); const current = finishRollup(metric, value.current); const previous = finishRollup(metric, value.previous); return { productId, product: byProduct.get(productId)?.name || productId, metric, currency: value.currency, current, previous, change: previous ? ((current - previous) / Math.abs(previous)) * 100 : null }; }).sort((a, b) => b.current - a.current);
@@ -48,8 +51,8 @@ export default async function IntelligenceViewPage({ params, searchParams }: { p
   const metricCards = definition.metrics.flatMap((metric) => { const currencies = [...new Set(rows.filter((row) => row.metric === metric).map((row) => row.currency))]; return (currencies.length ? currencies : [null]).map((currency) => ({ metric, currency })); });
   return <div className="app-page"><header className="app-page-head"><div><span>{t(definition.eyebrow)}{savedView ? ` · ${savedView.name}` : ''}</span><h1>{t(definition.title)}</h1><p>{t(definition.copy)}</p></div><a className="app-primary" href={`/dashboard/agent?preset=${definition.agentPreset}`}>{zh ? `询问${t(definition.agent)}` : `Ask ${definition.agent}`}</a></header>
     <section className="view-metric-grid">{metricCards.map(({ metric, currency }) => { const current = totalFor(metric, currency, 'current'); const previous = totalFor(metric, currency, 'previous'); const change = previous ? ((current - previous) / Math.abs(previous)) * 100 : null; return <article key={`${metric}:${currency || ''}`}><span>{humanize(metric, locale)}{currency ? ` · ${currency.toUpperCase()}` : ''}</span><strong>{formatMetric(metric, current, currency, locale)}</strong><small>{change === null ? t('No comparable prior evidence') : zh ? `较前 7 天${change >= 0 ? '增长' : '下降'} ${Math.abs(change).toFixed(1)}%` : `${change >= 0 ? '+' : ''}${change.toFixed(1)}% vs prior 7 days`}</small></article>; })}</section>
-    {agentBriefing && sourceRun && <section className="app-panel smart-dashboard-briefing"><div className="panel-title"><div><span>{t('AGENT-GENERATED BRIEFING')}</span><h2>{agentBriefing.summary}</h2></div><span className="status-pill">{zh ? `已冻结 · ${sourceRun.createdAt.slice(0, 10)}` : `Frozen ${sourceRun.createdAt.slice(0, 10)}`}</span></div><div className="smart-dashboard-findings">{agentBriefing.findings.slice(0, 5).map((finding, index) => <article key={`${sourceRun.id}:${index}`} data-severity={finding.severity}><header><strong>{finding.title}</strong><b>{Math.round(finding.confidence * 100)}%</b></header><p>{finding.detail}</p><small>{zh ? '下一步：' : 'Next: '}{finding.action}</small><div className="finding-evidence">{finding.evidenceRefs.map((reference) => <code key={reference}>{reference}</code>)}</div></article>)}</div><footer><span>{t('This briefing is a stored Agent conclusion; metric cards above continue to use current workspace evidence.')}</span><a href={`/dashboard/agent/runs/${sourceRun.id}`}>{t('Inspect frozen evidence →')}</a></footer></section>}
-    <section className="app-panel view-evidence"><div className="panel-title"><div><span>{t('EVIDENCE TABLE')}</span><h2>{t('Product and metric movement')}</h2></div><span className="status-pill">{zh ? `${pointRows.length} 个数据点 · 14 天` : `${pointRows.length} points · 14d`}</span></div>{rows.slice(0, 30).map((row) => <article className="evidence-row" key={`${row.productId}:${row.metric}:${row.currency || ''}`}><div><strong>{row.product}</strong><small>{humanize(row.metric, locale)}{row.currency ? ` · ${row.currency.toUpperCase()}` : ''}</small></div><span>{formatMetric(row.metric, row.previous, row.currency, locale)}</span><b>{formatMetric(row.metric, row.current, row.currency, locale)}</b><em>{row.change === null ? '—' : `${row.change >= 0 ? '+' : ''}${row.change.toFixed(1)}%`}</em></article>)}{!rows.length && <div className="panel-empty"><p>{t('This view has no matching evidence yet. Connect a source or import metrics with the names shown above.')}</p><a href="/dashboard/sources">{t('Connect evidence →')}</a></div>}</section>
+    {agentBriefing && sourceRun && <section className="app-panel smart-dashboard-briefing"><div className="panel-title"><div><span>{t('AGENT-GENERATED BRIEFING')}</span><h2>{agentBriefing.summary}</h2></div><span className="status-pill">{zh ? `已冻结 · ${sourceRun.createdAt.slice(0, 10)}` : `Frozen ${sourceRun.createdAt.slice(0, 10)}`}</span></div><div className="smart-dashboard-findings">{agentBriefing.findings.slice(0, 5).map((finding, index) => <article key={`${sourceRun.id}:${index}`} data-severity={finding.severity}><header><strong>{finding.title}</strong><b>{Math.round(finding.confidence * 100)}%</b></header><p>{finding.detail}</p><small>{zh ? '下一步：' : 'Next: '}{finding.action}</small></article>)}</div><footer><span>{t('This briefing is a stored Agent conclusion; metric cards above continue to use current workspace evidence.')}</span><a href={`/dashboard/agent/runs/${sourceRun.id}`}>{t('Inspect frozen evidence →')}</a></footer></section>}
+    <section className="app-panel view-evidence"><div className="panel-title"><div><span>{t('EVIDENCE TABLE')}</span><h2>{t('Product and metric movement')}</h2></div><span className="status-pill">{zh ? `${pointRows.length} 个数据点 · 截至 ${dates?.end || '—'}` : `${pointRows.length} points · through ${dates?.end || '—'}`}</span></div>{rows.slice(0, 30).map((row) => <article className="evidence-row" key={`${row.productId}:${row.metric}:${row.currency || ''}`}><div><strong>{row.product}</strong><small>{humanize(row.metric, locale)}{row.currency ? ` · ${row.currency.toUpperCase()}` : ''}</small></div><span>{formatMetric(row.metric, row.previous, row.currency, locale)}</span><b>{formatMetric(row.metric, row.current, row.currency, locale)}</b><em>{row.change === null ? '—' : `${row.change >= 0 ? '+' : ''}${row.change.toFixed(1)}%`}</em></article>)}{!rows.length && <div className="panel-empty"><p>{t('This view has no matching evidence yet. Connect a source or import metrics with the names shown above.')}</p><a href="/dashboard/sources">{t('Connect evidence →')}</a></div>}</section>
   </div>;
 }
 

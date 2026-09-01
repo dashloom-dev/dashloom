@@ -16,7 +16,7 @@ export function parseExecutiveSchedulePresets(raw: string): AgentPreset[] {
 }
 
 export function formatExecutiveReportSections(digest: Digest) {
-  const specialists = digest.specialists.map((specialist) => `- **${specialist.agent}:** ${specialist.summary} (${specialist.findingCount} findings; run ${specialist.analysisRunId})`).join('\n');
-  const priorities = digest.priorities.map((priority, index) => `## ${index + 1}. ${priority.title}\n\n${priority.detail}\n\n**Specialist:** ${priority.agent}\n\n**Next action:** ${priority.action}\n\n**Confidence:** ${Math.round(priority.confidence * 100)}%\n\n**Evidence:** ${priority.evidenceRefs.join(', ')}\n\n**Analysis run:** ${priority.analysisRunId}`).join('\n\n');
+  const specialists = digest.specialists.map((specialist) => `- **${specialist.agent}:** ${specialist.summary} (${specialist.findingCount} findings)`).join('\n');
+  const priorities = digest.priorities.map((priority, index) => `## ${index + 1}. ${priority.title}\n\n${priority.detail}\n\n**Specialist:** ${priority.agent}\n\n**Next action:** ${priority.action}\n\n**Confidence:** ${Math.round(priority.confidence * 100)}%`).join('\n\n');
   return { specialists, priorities };
 }

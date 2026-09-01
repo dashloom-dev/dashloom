@@ -6,7 +6,9 @@ test('community dashboard uses grouped route-aware navigation without cloud-only
   const navigation = readFileSync(new URL('../app/dashboard/dashboard-navigation.tsx', import.meta.url), 'utf8');
   assert.match(navigation, /usePathname/);
   assert.match(navigation, /<details className="dashboard-nav-group"/);
-  assert.match(navigation, /aria-current=\{itemActive \? 'page'/);
+  assert.match(navigation, /current=\{itemActive\}/);
+  assert.match(navigation, /useLinkStatus/);
+  assert.match(navigation, /prefetch=\{prefetch\}/);
   assert.match(navigation, /window\.matchMedia\('\(max-width: 620px\)'\)/);
   assert.match(navigation, /\/dashboard\/products\/new/);
   assert.match(navigation, /\/dashboard\/products\/goals/);

@@ -6,6 +6,17 @@ html { scroll-behavior:smooth; background:#031119; }
 body { margin:0; color:var(--ink); background:radial-gradient(circle at 50% -10%,#0b2b31 0,#061720 31rem,#031119 60rem); font-family:var(--font-geist-sans),Arial,sans-serif; }
 a { color:inherit; text-decoration:none; }
 button { font:inherit; }
+button:not(:disabled),input[type='button']:not(:disabled),input[type='submit']:not(:disabled),[role='button']:not([aria-disabled='true']) { -webkit-tap-highlight-color:transparent; }
+button[data-instant-pressed='true'],input[data-instant-pressed='true'],[role='button'][data-instant-pressed='true'],a[data-instant-pressed='true'] { transform:translateY(1px) scale(.985)!important; filter:brightness(.92); transition-duration:40ms!important; }
+button[data-instant-action='pending'],input[data-instant-action='pending'],[role='button'][data-instant-action='pending'] { cursor:wait!important; }
+button[data-instant-action='pending']::after,[role='button'][data-instant-action='pending']::after { width:.82em; height:.82em; flex:0 0 auto; content:''; border:1.5px solid currentColor; border-right-color:transparent; border-radius:50%; animation:instant-action-spin .55s linear infinite; }
+.instant-navigation-progress { position:fixed; z-index:2147483647; top:0; left:0; right:0; height:3px; overflow:hidden; pointer-events:none; opacity:0; transition:opacity .08s ease; }
+.instant-navigation-progress[data-active='true'] { opacity:1; }
+.instant-navigation-progress>span { display:block; width:38%; height:100%; border-radius:0 999px 999px 0; background:linear-gradient(90deg,#54e6ad,#5de1d6,#8fa4ff); box-shadow:0 0 12px rgba(84,230,173,.65); animation:instant-navigation-run 1s ease-in-out infinite; }
+a[data-instant-navigation='pending'] { cursor:progress!important; }
+@keyframes instant-action-spin { to { transform:rotate(360deg); } }
+@keyframes instant-navigation-run { 0% { transform:translateX(-110%); } 60% { width:62%; } 100% { transform:translateX(265%); } }
+@media(prefers-reduced-motion:reduce) { button[data-instant-pressed='true'],input[data-instant-pressed='true'],[role='button'][data-instant-pressed='true'],a[data-instant-pressed='true'] { transform:none!important; } .instant-navigation-progress>span { width:72%; animation:none; } }
 main { min-height:100vh; overflow:hidden; }
 
 .site-nav { width:min(1180px,calc(100% - 40px)); height:76px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); position:relative; z-index:5; }
