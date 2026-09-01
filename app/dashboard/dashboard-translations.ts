@@ -100,6 +100,8 @@ const zh: Record<string, string> = {
   'Export excludes API keys and encrypted channel secrets. Deletion permanently removes this workspace and all workspace-owned data through database cascades.': '导出不包含 API Key 和加密的通道密钥。删除会通过数据库级联永久移除当前工作空间及其数据。',
   'Download JSON export': '下载 JSON 导出', 'Type': '输入', 'to confirm': '确认', 'Delete workspace': '删除工作空间',
   'My OpenAI-compatible API': '我的 OpenAI 兼容 API', 'Stored encrypted; never displayed again': '加密存储，之后不再显示',
+  'Compatibility mode': '兼容模式', 'Auto detect (recommended)': '自动检测（推荐）', 'Standard OpenAI': '标准 OpenAI', 'Model-specific endpoint': '模型专用接口',
+  'Dashloom sends one minimal model request to detect streaming and endpoint compatibility before enabling the Agent. The validated profile is reused for real Agent requests. The key is encrypted server-side and never returned by the API.': '启用 Agent 前，Dashloom 会发送一次最小模型请求，检测流式输出和接口兼容性。实际 Agent 请求会复用已验证的配置。密钥在服务端加密，API 不会返回密钥。',
   'Dashloom validates': 'Dashloom 会验证', 'before enabling the Agent. The key is encrypted server-side, never returned by the API, and can be removed by disabling the provider.': '后再启用 Agent。密钥在服务端加密，API 不会返回密钥；停用服务商即可移除。',
   'Validating the provider…': '正在验证服务商…', 'Validating…': '验证中…', 'Provider saved.': '服务商已保存。', 'Connect provider': '连接服务商',
   'Advanced: this write-only key can send metrics for every product. Prefer a product-scoped key from Data sources.': '高级功能：此只写 Key 可为所有产品发送指标。建议优先在数据源页面创建限定产品范围的 Key。',
@@ -384,6 +386,15 @@ const zh: Record<string, string> = {
   "Analysis completed and stored with its evidence snapshot.": "分析已完成，并与证据快照一同保存。",
   "The AI provider returned an empty response. Try again; if this continues, verify the configured model and API base URL.": "AI 服务商返回了空响应，请重试；如果持续出现，请检查配置的模型和 API 基础地址。",
   "The AI provider returned incomplete or invalid JSON. Try again; if this continues, verify the model supports the configured output limit.": "AI 服务商返回了不完整或无效的 JSON，请重试；如果持续出现，请确认模型支持当前输出长度限制。",
+  "The AI provider returned JSON that did not match the required Agent result structure. Try again.": "AI 服务商返回的 JSON 不符合 Agent 结果结构，请重试。",
+  "The AI provider returned findings that did not match the supplied evidence. Try again.": "AI 服务商返回的分析结果与本轮证据不匹配，请重试。",
+  "The AI provider rejected the API key. Reconnect the model with a valid key.": "AI 服务商拒绝了 API Key，请使用有效密钥重新连接模型。",
+  "The AI provider rejected the request format. Reconnect the model to validate its endpoint, then try again.": "AI 服务商拒绝了当前请求格式。请重新连接模型以验证接口，然后再试。",
+  "The AI provider endpoint was not found. Check the API base URL and reconnect the model.": "没有找到 AI 服务商接口，请检查 API 基础地址并重新连接模型。",
+  "The AI provider is rate-limited or has insufficient provider credit. Check the provider account and try again.": "AI 服务商触发了限流或服务商账户余额不足，请检查服务商账户后重试。",
+  "The AI provider is temporarily unavailable. Try again shortly or connect another model.": "AI 服务商暂时不可用，请稍后重试或连接其他模型。",
+  "The AI provider did not return a response in time. Try again or connect another model.": "AI 服务商未能及时返回响应，请重试或连接其他模型。",
+  "The AI provider request failed. Verify the model name, API base URL, and provider account, then try again.": "AI 服务商请求失败，请检查模型名称、API 基础地址和服务商账户后重试。",
   "Smart dashboard could not be created.": "无法创建智能看板。",
   "Freezing current evidence…": "正在冻结当前证据…",
   "The Agent could not analyze this signal.": "Agent 无法分析此信号。",
@@ -681,6 +692,7 @@ zh.Add = '加';
 zh.Scale = '结果倍数';
 
 const patterns: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
+  [/^Provider connected using (standard_stream|standard_json|model_endpoint_stream|model_endpoint_json)\.$/, (m) => `服务商连接成功，已自动采用 ${m[1]} 兼容模式。`],
   [/^Provider returned HTTP (\d+) while validating\.$/, (m) => `服务商验证接口返回 HTTP ${m[1]}，请检查 API 地址、密钥和模型服务状态。`],
   [/^Provider base URL DNS validation returned HTTP (\d+)\.$/, (m) => `API 基础地址的 DNS 验证返回 HTTP ${m[1]}，请稍后重试。`],
   [/^Provider base URL hostname resolves to a private, link-local, or reserved address\.$/, () => 'API 基础地址解析到了私有、链路本地或保留地址。'],

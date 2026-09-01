@@ -1,9 +1,10 @@
 import { env } from 'cloudflare:workers';
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { connectorAccounts, connectorResources, metricPoints, oauthStates, productConnectorMappings, products, syncRuns } from '@/db/schema';
 import { decryptSecret, encryptSecret } from './crypto';
 import { SYNC_HISTORY_DAYS, syncHistoryStart } from './history-window';
+import { gscSearchAnalyticsPoints, type GscSearchAnalyticsRow } from './google-search-console-metrics';
 
 const GOOGLE_SCOPES = [
   'openid',
@@ -191,8 +192,30 @@ async function syncGa4Mapping(workspaceId: string, productId: string, domain: st
 async function syncGscMapping(workspaceId: string, productId: string, siteUrl: string, token: string) {
   const startDate = syncHistoryStart();
   const endDate = new Date().toISOString().slice(0, 10);
-  const response = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ startDate, endDate, dimensions: ['date'], rowLimit: 25000, dataState: 'all' }), signal: AbortSignal.timeout(20000) });
-  if (!response.ok) throw new Error(`Search Console site ${siteUrl} returned HTTP ${response.status}.`);
-  const payload = await response.json() as { rows?: Array<{ keys?: string[]; clicks?: number; impressions?: number; ctr?: number; position?: number }> };
-  return (payload.rows || []).flatMap((row) => { const metricDate = row.keys?.[0]; if (!metricDate) return []; return [['clicks', row.clicks || 0], ['impressions', row.impressions || 0], ['ctr', row.ctr || 0], ['position', row.position || 0]].map(([metric, value]) => ({ workspaceId, productId, source: 'gsc', metric: String(metric), metricDate, value: Number(value), dimensionsJson: '{}', collectedAt: new Date().toISOString() })); });
+  const endpoint = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`;
+  const request = async (dimensions: Array<'date' | 'query' | 'page'>, rowLimit: number) => {
+    const response = await fetch(endpoint, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ startDate, endDate, dimensions, rowLimit, dataState: 'all' }), signal: AbortSignal.timeout(20000) });
+    if (!response.ok) throw new Error(`Search Console site ${siteUrl} returned HTTP ${response.status}.`);
+    return response.json() as Promise<{ rows?: GscSearchAnalyticsRow[] }>;
+  };
+  const dimensionLimit = 2000;
+  const [daily, queries, pages] = await Promise.all([
+    request(['date'], 25000),
+    request(['date', 'query'], dimensionLimit),
+    request(['date', 'page'], dimensionLimit),
+  ]);
+  const collectedAt = new Date().toISOString();
+  await getDb().delete(metricPoints).where(and(
+    eq(metricPoints.workspaceId, workspaceId),
+    eq(metricPoints.productId, productId),
+    eq(metricPoints.source, 'gsc'),
+    inArray(metricPoints.metric, ['clicks', 'impressions', 'ctr', 'position', 'query_clicks', 'query_impressions', 'query_position', 'page_clicks', 'page_impressions', 'page_position']),
+    gte(metricPoints.metricDate, startDate),
+    lte(metricPoints.metricDate, endDate),
+  ));
+  return [
+    ...gscSearchAnalyticsPoints(daily.rows || [], null, false, collectedAt),
+    ...gscSearchAnalyticsPoints(queries.rows || [], 'query', (queries.rows?.length || 0) >= dimensionLimit, collectedAt),
+    ...gscSearchAnalyticsPoints(pages.rows || [], 'page', (pages.rows?.length || 0) >= dimensionLimit, collectedAt),
+  ].map((point) => ({ workspaceId, productId, source: 'gsc', ...point }));
 }

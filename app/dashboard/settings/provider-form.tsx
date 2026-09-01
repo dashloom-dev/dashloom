@@ -12,7 +12,7 @@ export function ProviderForm({ returnTo, embedded = false }: { returnTo?: string
     setPending(true);
     setMessage('Validating the provider…');
     const form = new FormData(event.currentTarget);
-    const response = await fetch('/api/ai/providers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ displayName: form.get('displayName'), baseUrl: form.get('baseUrl'), apiKey: form.get('apiKey'), model: form.get('model') }) });
+    const response = await fetch('/api/ai/providers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ displayName: form.get('displayName'), baseUrl: form.get('baseUrl'), apiKey: form.get('apiKey'), model: form.get('model'), compatibilityMode: form.get('compatibilityMode') }) });
     const result = await response.json() as { error?: string; message?: string; provider?: { status: 'connected' | 'attention' } };
     setPending(false);
     setMessage(result.error || result.message || 'Provider saved.');
@@ -23,8 +23,8 @@ export function ProviderForm({ returnTo, embedded = false }: { returnTo?: string
     }
   }
   return <form id="ai-provider" className={`settings-form provider-form${embedded ? ' provider-form-embedded' : ''}`} onSubmit={submit}>
-    <div className="settings-grid"><label>Display name<input name="displayName" required placeholder="My OpenAI-compatible API" /></label><label>API base URL<input name="baseUrl" type="url" required defaultValue="https://api.openai.com/v1" /></label><label>Model<input name="model" required placeholder="gpt-5-mini" /></label><label>API key<input name="apiKey" type="password" autoComplete="new-password" required placeholder="Stored encrypted; never displayed again" /></label></div>
-    <p>Dashloom validates a read-only provider endpoint before enabling the Agent. The key is encrypted server-side, never returned by the API, and can be removed by disabling the provider.</p>
+    <div className="settings-grid"><label>Display name<input name="displayName" required placeholder="My OpenAI-compatible API" /></label><label>API base URL<input name="baseUrl" type="url" required defaultValue="https://api.openai.com/v1" /></label><label>Model<input name="model" required placeholder="gpt-5-mini" /></label><label>API key<input name="apiKey" type="password" autoComplete="new-password" required placeholder="Stored encrypted; never displayed again" /></label><label>Compatibility mode<select name="compatibilityMode" defaultValue="auto"><option value="auto">Auto detect (recommended)</option><option value="standard_openai">Standard OpenAI</option><option value="model_endpoint">Model-specific endpoint</option></select></label></div>
+    <p>Dashloom sends one minimal model request to detect streaming and endpoint compatibility before enabling the Agent. The validated profile is reused for real Agent requests. The key is encrypted server-side and never returned by the API.</p>
     <button className="app-primary" disabled={pending}>{pending ? 'Validating…' : 'Connect provider'}</button>{message && <p className="form-message" role="status">{message}</p>}
   </form>;
 }

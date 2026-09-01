@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { agentTaskDuration, agentTaskRetry, parseAnalysisRequestQuestion } from '../lib/agent-task-center.ts';
+import { agentTaskDuration, agentTaskRetry, normalizeAnalysisRequestQuestion, parseAnalysisRequestQuestion } from '../lib/agent-task-center.ts';
 
 test('task center recovers only a valid original Agent question', () => {
   assert.equal(parseAnalysisRequestQuestion('{"request":{"question":" What changed? "}}'), 'What changed?');
   assert.equal(parseAnalysisRequestQuestion('{"request":{"question":"x"}}'), null);
   assert.equal(parseAnalysisRequestQuestion('{bad json'), null);
+  assert.equal(normalizeAnalysisRequestQuestion(' Direct question? '), 'Direct question?');
+  assert.equal(normalizeAnalysisRequestQuestion(42), null);
 });
 
 test('failed task retry requires an active conversation, available scope, and exact prompt', () => {

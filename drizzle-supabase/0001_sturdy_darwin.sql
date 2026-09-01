@@ -1,0 +1,1 @@
+ALTER TABLE "ai_provider_accounts" ADD COLUMN "compatibility_json" text DEFAULT '{}' NOT NULL;

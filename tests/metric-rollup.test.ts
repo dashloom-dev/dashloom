@@ -20,4 +20,6 @@ test('metric semantics keep flows additive, stocks latest, and ratios averaged',
   assert.equal(roll('conversion_rate', values), 20);
   assert.equal(metricRollup('vercel_deployment_duration_ms'), 'average');
   assert.equal(metricRollup('vercel_last_completed_deployment_success'), 'latest');
+  assert.equal(metricRollup('query_position'), 'average');
+  assert.equal(metricRollup('page_position'), 'average');
 });

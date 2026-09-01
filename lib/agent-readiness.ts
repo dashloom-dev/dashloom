@@ -31,3 +31,18 @@ export async function getWorkspaceAgentReadinessByProduct(workspaceId: string, r
   ]);
   return Object.fromEntries(productIds.map((productId) => [productId, summarizeAgentReadiness(rows.filter((row) => row.productId === productId), competitorRows.filter((row) => row.productId === productId))]));
 }
+
+export async function getWorkspaceAgentReadinessSnapshot(workspaceId: string) {
+  const start = day(comparisonWindow('chat').startOffset);
+  const metricDomain = jsonText(metricPoints.dimensionsJson, 'domain');
+  const competitorDomain = jsonText(competitorMetricPoints.dimensionsJson, 'domain');
+  const [rows, competitorRows] = await Promise.all([
+    getDb().select({ productId: metricPoints.productId, metric: metricPoints.metric, source: metricPoints.source, domain: metricDomain, metricDate: sql<string>`max(${metricPoints.metricDate})`, pointCount: count() }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), gte(metricPoints.metricDate, start))).groupBy(metricPoints.productId, metricPoints.metric, metricPoints.source, metricDomain).limit(20000),
+    getDb().select({ productId: competitors.productId, metric: competitorMetricPoints.metric, source: competitorMetricPoints.source, domain: competitorDomain, metricDate: sql<string>`max(${competitorMetricPoints.metricDate})`, pointCount: count() }).from(competitorMetricPoints).innerJoin(competitors, eq(competitorMetricPoints.competitorId, competitors.id)).where(and(eq(competitorMetricPoints.workspaceId, workspaceId), gte(competitorMetricPoints.metricDate, start))).groupBy(competitors.productId, competitorMetricPoints.metric, competitorMetricPoints.source, competitorDomain).limit(5000),
+  ]);
+  const productIds = [...new Set([...rows.map((row) => row.productId), ...competitorRows.map((row) => row.productId).filter((productId): productId is string => Boolean(productId))])];
+  return {
+    workspace: summarizeAgentReadiness(rows, competitorRows),
+    byProduct: Object.fromEntries(productIds.map((productId) => [productId, summarizeAgentReadiness(rows.filter((row) => row.productId === productId), competitorRows.filter((row) => row.productId === productId))])),
+  };
+}

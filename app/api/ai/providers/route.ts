@@ -8,12 +8,15 @@ import { encryptSecret } from '@/lib/crypto';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { assertSafeRemoteUrl } from '@/lib/safe-url';
 import { recordAuditEvent } from '@/lib/audit';
+import { compatibilityModes, detectOpenAiCompatibility, parseProviderCompatibility } from '@/lib/openai-compatible';
+import { classifyAgentFailure } from '@/lib/agent-errors';
 
 const input = z.object({
   displayName: z.string().trim().min(2).max(80),
   baseUrl: z.string().url(),
   apiKey: z.string().trim().min(8).max(500),
   model: z.string().trim().min(1).max(120),
+  compatibilityMode: z.enum(compatibilityModes).default('auto'),
 });
 
 async function current(request: Request) {
@@ -26,8 +29,8 @@ async function current(request: Request) {
 export async function GET(request: Request) {
   const context = await current(request);
   if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const rows = await getDb().select({ id: aiProviderAccounts.id, displayName: aiProviderAccounts.displayName, mode: aiProviderAccounts.mode, provider: aiProviderAccounts.provider, baseUrl: aiProviderAccounts.baseUrl, model: aiProviderAccounts.model, status: aiProviderAccounts.status, lastCheckedAt: aiProviderAccounts.lastCheckedAt }).from(aiProviderAccounts).where(eq(aiProviderAccounts.workspaceId, context.workspace.id)).orderBy(desc(aiProviderAccounts.createdAt));
-  return NextResponse.json({ providers: rows });
+  const rows = await getDb().select({ id: aiProviderAccounts.id, displayName: aiProviderAccounts.displayName, mode: aiProviderAccounts.mode, provider: aiProviderAccounts.provider, baseUrl: aiProviderAccounts.baseUrl, model: aiProviderAccounts.model, compatibilityJson: aiProviderAccounts.compatibilityJson, status: aiProviderAccounts.status, lastCheckedAt: aiProviderAccounts.lastCheckedAt }).from(aiProviderAccounts).where(eq(aiProviderAccounts.workspaceId, context.workspace.id)).orderBy(desc(aiProviderAccounts.createdAt));
+  return NextResponse.json({ providers: rows.map(({ compatibilityJson, ...provider }) => ({ ...provider, compatibilityProfile: provider.baseUrl ? parseProviderCompatibility(compatibilityJson, provider.baseUrl).profile : null })) });
 }
 
 export async function POST(request: Request) {
@@ -47,15 +50,13 @@ export async function POST(request: Request) {
   }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unsafe provider URL' }, { status: 400 }); }
   let status: 'connected' | 'attention' = 'attention';
-  let checkMessage = 'Provider saved, but the models endpoint did not validate.';
+  let checkMessage = 'Provider saved, but no compatible chat request passed validation.';
+  let compatibilityJson = '{}';
   try {
-    const providerUrl = new URL(baseUrl);
-    const validationUrl = providerUrl.hostname === 'api.kie.ai' ? new URL('/api/v1/chat/credit', providerUrl).toString() : `${baseUrl}/models`;
-    const response = await fetch(validationUrl, { headers: { authorization: `Bearer ${parsed.data.apiKey}`, accept: 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(10000) });
-    if (response.ok) { status = 'connected'; checkMessage = 'Provider connected.'; }
-    else if (response.status >= 300 && response.status < 400) checkMessage = 'Provider validation refused a redirect. Use the final API base URL.';
-    else checkMessage = `Provider returned HTTP ${response.status} while validating.`;
-  } catch { checkMessage = 'Provider could not be reached during validation.'; }
+    const compatibility = await detectOpenAiCompatibility({ baseUrl, apiKey: parsed.data.apiKey, model: parsed.data.model, mode: parsed.data.compatibilityMode });
+    compatibilityJson = JSON.stringify(compatibility);
+    status = 'connected'; checkMessage = `Provider connected using ${compatibility.profile}.`;
+  } catch (error) { checkMessage = classifyAgentFailure(error).message; }
 
   await getDb().insert(aiProviderAccounts).values({
     id,
@@ -65,11 +66,12 @@ export async function POST(request: Request) {
     displayName: parsed.data.displayName,
     baseUrl,
     model: parsed.data.model,
+    compatibilityJson,
     encryptedApiKey: await encryptSecret(parsed.data.apiKey, `ai-provider:${context.workspace.id}:${id}`),
     status,
     lastCheckedAt: new Date().toISOString(),
   });
-  return NextResponse.json({ provider: { id, displayName: parsed.data.displayName, baseUrl, model: parsed.data.model, status }, message: checkMessage }, { status: 201 });
+  return NextResponse.json({ provider: { id, displayName: parsed.data.displayName, baseUrl, model: parsed.data.model, status, compatibility: JSON.parse(compatibilityJson) }, message: checkMessage }, { status: 201 });
 }
 
 export async function DELETE(request: Request) { const context = await current(request); if (!context) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); if (!['owner', 'admin'].includes(context.workspace.role)) return NextResponse.json({ error: 'Owner or admin access required' }, { status: 403 }); const id = new URL(request.url).searchParams.get('id'); if (!id || !z.string().uuid().safeParse(id).success) return NextResponse.json({ error: 'Valid provider ID is required' }, { status: 400 }); const [provider] = await getDb().select({ id: aiProviderAccounts.id, mode: aiProviderAccounts.mode }).from(aiProviderAccounts).where(and(eq(aiProviderAccounts.id, id), eq(aiProviderAccounts.workspaceId, context.workspace.id))).limit(1); if (!provider) return NextResponse.json({ error: 'Provider not found' }, { status: 404 }); await getDb().update(aiProviderAccounts).set({ status: 'disabled', encryptedApiKey: null, updatedAt: new Date().toISOString() }).where(and(eq(aiProviderAccounts.id, id), eq(aiProviderAccounts.workspaceId, context.workspace.id))); await recordAuditEvent({ workspaceId: context.workspace.id, actorUserId: context.authSession.user.id, action: 'ai_provider.disabled', targetType: 'ai_provider', targetId: id, metadata: { mode: provider.mode, credentialRemoved: true } }); return NextResponse.json({ disabled: true }); }

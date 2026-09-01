@@ -254,6 +254,7 @@ export const aiProviderAccounts = sqliteTable('ai_provider_accounts', {
   displayName: text('display_name').notNull(),
   baseUrl: text('base_url'),
   model: text('model').notNull(),
+  compatibilityJson: text('compatibility_json').notNull().default('{}'),
   encryptedApiKey: text('encrypted_api_key'),
   status: text('status', { enum: ['pending', 'connected', 'attention', 'disabled'] }).notNull().default('pending'),
   lastCheckedAt: text('last_checked_at'),

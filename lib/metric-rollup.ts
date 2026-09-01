@@ -5,7 +5,7 @@ const averageMetrics = new Set(['ctr', 'position', 'churn_rate', 'retention_rate
 
 export function metricRollup(metric: string): MetricRollup {
   if (latestMetrics.has(metric)) return 'latest';
-  if (averageMetrics.has(metric) || metric.endsWith('_rate') || metric.endsWith('_percent')) return 'average';
+  if (averageMetrics.has(metric) || metric.endsWith('_rate') || metric.endsWith('_percent') || metric.endsWith('_position') || metric.endsWith('_ctr')) return 'average';
   return 'sum';
 }
 

@@ -6,14 +6,26 @@ import { translateDashboard } from '../app/dashboard/dashboard-translations.ts';
 test('Cloudflare-compatible provider validation rejects redirects manually', () => {
   const safeUrl = readFileSync(new URL('../lib/safe-url.ts', import.meta.url), 'utf8');
   const providerRoute = readFileSync(new URL('../app/api/ai/providers/route.ts', import.meta.url), 'utf8');
+  const adapter = readFileSync(new URL('../lib/openai-compatible.ts', import.meta.url), 'utf8');
+  const agent = readFileSync(new URL('../lib/agent.ts', import.meta.url), 'utf8');
+  const form = readFileSync(new URL('../app/dashboard/settings/provider-form.tsx', import.meta.url), 'utf8');
+  const migration = readFileSync(new URL('../drizzle/0001_sparkling_vivisector.sql', import.meta.url), 'utf8');
 
   assert.doesNotMatch(safeUrl, /redirect:\s*['"]error['"]/);
   assert.match(safeUrl, /redirect:\s*['"]manual['"]/);
-  assert.match(providerRoute, /redirect:\s*['"]manual['"]/);
-  assert.match(providerRoute, /response\.status >= 300 && response\.status < 400/);
-  assert.match(providerRoute, /api\.kie\.ai/);
-  assert.match(providerRoute, /\/api\/v1\/chat\/credit/);
+  assert.match(adapter, /redirect:\s*['"]manual['"]/);
+  assert.match(adapter, /response\.status >= 300 && response\.status < 400/);
+  assert.match(adapter, /\/chat\/completions/);
+  assert.match(providerRoute, /detectOpenAiCompatibility/);
+  assert.match(providerRoute, /compatibilityJson/);
   assert.match(providerRoute, /pathname\.endsWith\('\/chat\/completions'\)/);
+  assert.match(agent, /parseProviderCompatibility/);
+  assert.match(agent, /invokeOpenAiCompatible/);
+  assert.doesNotMatch(agent, /createOpenAI|generateText/);
+  assert.match(agent, /Math\.ceil\(\(system\.length \+ prompt\.length\) \/ 4\)/);
+  assert.match(form, /compatibilityMode/);
+  assert.match(form, /Auto detect \(recommended\)/);
+  assert.match(migration, /ADD `compatibility_json`/);
 });
 
 test('AI provider connection results have actionable Chinese translations', () => {
