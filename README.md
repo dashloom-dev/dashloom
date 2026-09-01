@@ -18,9 +18,9 @@ To try it locally, go to [Local installation](#local-installation), then follow 
 
 - Product-scoped data, goals, competitors, dashboards, actions, and Growth Missions.
 - Five intelligence views: Indie Hacker, SaaS Revenue, SEO Growth, Infrastructure Operations, and Agency Client.
-- BYOK Agent conversations, Executive Briefs, model comparison, task history, and links back to source data.
+- BYOK Agent conversations with screenshot input, verified execution traces, readable evidence-backed rationale, Executive Briefs, model comparison, task history, and links back to source data.
 - Signal Radar for deterministic period comparisons and cross-signal hypotheses without causal overclaiming.
-- Google Analytics/Search Console, Bing Webmaster, Cloudflare D1 business aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, Cloudflare Workers/R2/Pages/Queues, GitHub, Vercel, and Custom REST connectors.
+- Google Analytics/Search Console, Bing Webmaster, guided Cloudflare D1 business discovery and aggregates, Stripe, Lemon Squeezy, Creem, Polar, Paddle, Cloudflare Workers/R2/Pages/Queues, GitHub, Vercel, and Custom REST connectors.
 - Manual imports, ingestion API keys, calculated metrics, scheduled synchronization, and locally stored reports.
 - English or Simplified Chinese as a deployment-wide interface locale, plus focused tabbed workflows.
 - Connector and Agent Skill SDKs, reviewed community extensions, audit history, and portable data export.

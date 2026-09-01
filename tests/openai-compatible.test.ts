@@ -44,6 +44,20 @@ test('standard compatibility includes the model and omits vendor-specific fields
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('multimodal invocation sends text plus image URL content parts', async () => {
+  const originalFetch = globalThis.fetch;
+  let body: Record<string, unknown> = {};
+  globalThis.fetch = async (_url, init) => {
+    body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    await invokeOpenAiCompatible({ baseUrl: 'https://example.com/v1', apiKey: 'test-key', model: 'vision-model', system: 'system', prompt: 'inspect', images: [{ label: 'Image 1', mimeType: 'image/png', byteSize: 9, sha256: 'a'.repeat(64), dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }], profile: 'standard_json' });
+    const messages = body.messages as Array<{ role: string; content: unknown }>;
+    assert.deepEqual(messages[1]?.content, [{ type: 'text', text: 'inspect' }, { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgo=', detail: 'high' } }]);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('automatic detection falls back from streaming to JSON and returns the validated profile', async () => {
   const originalFetch = globalThis.fetch;
   const bodies: Array<Record<string, unknown>> = [];

@@ -15,8 +15,8 @@ test('site-wide feedback covers navigation, action, pointer, and keyboard paths'
   assert.match(feedback, /document\.addEventListener\('pointerdown'/);
   assert.match(feedback, /document\.addEventListener\('click'/);
   assert.match(feedback, /document\.addEventListener\('submit'/);
-  assert.match(feedback, /document\.addEventListener\('focusin'/);
-  assert.match(feedback, /router\.prefetch\(destination\)/);
+  assert.doesNotMatch(feedback, /router\.prefetch\(destination\)/);
+  assert.match(feedback, /window\.location\.assign\(destination\)/);
   assert.match(feedback, /data-active=\{navigating/);
 });
 

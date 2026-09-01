@@ -1,4 +1,4 @@
-import { and, eq, gte } from 'drizzle-orm';
+import { and, eq, gte, notInArray } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { metricPoints, products } from '@/db/schema';
 import { addRollupValue, finishRollup, type RollupAccumulator } from './metric-rollup';
@@ -7,12 +7,18 @@ export type DashboardPoint = { productId: string; source: string; metric: string
 export type DashboardProduct = { id: string; name: string; domain: string | null; category: string | null; status: 'active' | 'paused' | 'archived' };
 export type MetricSeries = { metric: string; source: string; values: Array<{ date: string; value: number }>; current: number; previous: number; latestDate: string };
 
+const dashboardBreakdownMetrics = ['query_clicks', 'query_impressions', 'query_position', 'page_clicks', 'page_impressions', 'page_position'];
+
 export function dateOffset(offset: number) { return new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10); }
 
 export async function loadDashboardData(workspaceId: string, days = 90) {
   const [productRows, points] = await Promise.all([
     getDb().select({ id: products.id, name: products.name, domain: products.domain, category: products.category, status: products.status }).from(products).where(eq(products.workspaceId, workspaceId)).orderBy(products.name),
-    getDb().select({ productId: metricPoints.productId, source: metricPoints.source, metric: metricPoints.metric, metricDate: metricPoints.metricDate, value: metricPoints.value, dimensionsJson: metricPoints.dimensionsJson }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), gte(metricPoints.metricDate, dateOffset(-(days - 1))))).limit(30000),
+    getDb().select({ productId: metricPoints.productId, source: metricPoints.source, metric: metricPoints.metric, metricDate: metricPoints.metricDate, value: metricPoints.value, dimensionsJson: metricPoints.dimensionsJson }).from(metricPoints).where(and(
+      eq(metricPoints.workspaceId, workspaceId),
+      gte(metricPoints.metricDate, dateOffset(-(days - 1))),
+      notInArray(metricPoints.metric, dashboardBreakdownMetrics),
+    )).limit(30000),
   ]);
   return { products: productRows, points };
 }

@@ -3,6 +3,7 @@ import { getDb } from '@/db';
 import { connectorAccounts, metricPoints, productConnectorMappings, syncRuns } from '@/db/schema';
 import { decryptSecret } from './crypto';
 import { D1MetricConfiguration, validateReadOnlyQuery } from './d1-query';
+import { suggestBusinessMetrics, type DiscoveredResource } from './business-data-discovery';
 
 export { validateReadOnlyQuery } from './d1-query';
 export type { D1MetricConfiguration } from './d1-query';
@@ -33,6 +34,41 @@ async function executeReadOnlyQuery(credentials: D1Credentials, configuration: D
   return rows;
 }
 
+export async function discoverD1BusinessData(credentials: D1Credentials) {
+  await validateD1Credentials(credentials);
+  const tableList = await runD1MetadataQuery(credentials, 'PRAGMA table_list');
+  const names = tableList.flatMap((row) => typeof row.name === 'string'
+    && (row.type === 'table' || row.type === 'view')
+    && !row.name.startsWith('sqlite_')
+    && !row.name.startsWith('_cf_')
+    ? [row.name]
+    : []).slice(0, 60);
+  const resources: DiscoveredResource[] = [];
+  for (let index = 0; index < names.length; index += 6) {
+    const batch = await Promise.all(names.slice(index, index + 6).map(async (name) => {
+      const quotedName = `"${name.replaceAll('"', '""')}"`;
+      const rows = await runD1MetadataQuery(credentials, `PRAGMA table_info(${quotedName})`);
+      const columns = rows.flatMap((row) => typeof row.name === 'string'
+        ? [{ name: row.name, type: typeof row.type === 'string' ? row.type : '', ...(typeof row.pk === 'number' && row.pk > 0 ? { primaryKey: true } : {}) }]
+        : []);
+      return columns.length ? { name, columns } : null;
+    }));
+    resources.push(...batch.filter((resource): resource is DiscoveredResource => Boolean(resource)));
+  }
+  if (!resources.length) throw new Error('No readable D1 tables or views were found. Check the database and D1 Read token scope.');
+  return { resources, suggestions: suggestBusinessMetrics(resources) };
+}
+
+async function runD1MetadataQuery(credentials: D1Credentials, statement: string) {
+  const result = await cloudflareRequest(credentials, '/query', {
+    method: 'POST',
+    body: JSON.stringify({ sql: statement, params: [] }),
+  }) as Array<{ results?: Array<Record<string, unknown>>; success?: boolean; error?: string }>;
+  const query = Array.isArray(result) ? result[0] : undefined;
+  if (query?.success === false) throw new Error(query.error || 'Cloudflare D1 metadata query failed.');
+  return query?.results || [];
+}
+
 export async function syncD1Workspace(workspaceId: string) {
   const db = getDb();
   const mappings = await db.select({ mapping: productConnectorMappings, connector: connectorAccounts }).from(productConnectorMappings)
@@ -55,7 +91,8 @@ export async function syncD1Workspace(workspaceId: string) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(metricDate)) return [];
         return Object.entries(configuration.metrics).flatMap(([column, metric]) => {
           const value = Number(row[column]);
-          return Number.isFinite(value) ? [{ workspaceId, productId: item.mapping.productId, source: 'd1', metric, metricDate, value, dimensionsJson: '{}', collectedAt: new Date().toISOString() }] : [];
+          const dimensionsJson = JSON.stringify(configuration.metricDimensions?.[metric] || {});
+          return Number.isFinite(value) ? [{ workspaceId, productId: item.mapping.productId, source: 'd1', metric, metricDate, value, dimensionsJson, collectedAt: new Date().toISOString() }] : [];
         });
       });
       for (let index = 0; index < points.length; index += 10) await db.insert(metricPoints).values(points.slice(index, index + 10)).onConflictDoUpdate({
