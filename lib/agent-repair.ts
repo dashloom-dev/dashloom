@@ -23,7 +23,7 @@ export function buildAgentRepairRequest(input: AgentRepairInput) {
       summary: 'string',
       findings: [{ title: 'string', detail: 'string', severity: 'info|opportunity|warning|critical', metric: 'string|null', productId: 'string|null', currentValue: 'number|null', previousValue: 'number|null', changePercent: 'number|null', action: 'string', confidence: 'number 0..1', evidenceRefs: ['allowed evidence ID'] }],
     },
-    rules: ['Return 1 to 8 findings.', 'Every finding must cite at least one allowed evidence ID.', 'Relationship evidence must be explicitly labeled as a hypothesis.', ...(input.truncated?.metrics || input.truncated?.breakdowns || input.truncated?.competitors ? ['Disclose that evidence coverage is incomplete.'] : [])],
+    rules: ['Return 1 to 8 findings.', 'Every finding must cite at least one allowed evidence ID.', 'Relationship evidence must be explicitly labeled as a hypothesis.', ...(input.truncated?.metrics || input.truncated?.breakdowns || input.truncated?.competitors ? ['Include this exact sentence in one finding detail: Evidence coverage is incomplete because some records were truncated.'] : [])],
     productIds: boundedUnique(input.productIds, MAX_REPAIR_PRODUCT_IDS),
     allowedEvidenceIds: referencedFirst,
     draft,

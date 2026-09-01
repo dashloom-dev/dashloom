@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateAgentCitations } from '../lib/agent-validation.ts';
+import { ensureAgentEvidenceDisclosure, validateAgentCitations } from '../lib/agent-validation.ts';
 
 const evidence = { products: [{ id: 'product' }], series: [{ evidenceId: 'metric:product:source:revenue' }], competitors: [{ evidenceId: 'competitor:acme:manual:traffic:2026-08-26' }], competitorTrends: [{ evidenceId: 'competitor-trend:acme:manual:traffic' }], crossSignals: [{ evidenceId: 'relationship:abc' }], healthScores: [{ evidenceId: 'health:product' }], goals: [{ evidenceId: 'goal:revenue-target' }], missions: [{ evidenceId: 'mission:growth-one' }] };
 test('agent validation accepts only citations present in the frozen evidence bundle', () => {
@@ -20,6 +20,15 @@ test('agent validation requires disclosure when evidence collection is truncated
   const truncated = { ...evidence, truncated: { metrics: true, competitors: false } };
   assert.throws(() => validateAgentCitations({ findings: [{ title: 'Revenue moved', detail: 'Revenue declined.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated), /disclosed as incomplete/);
   assert.doesNotThrow(() => validateAgentCitations({ findings: [{ title: 'Partial evidence', detail: 'Coverage is incomplete because the evidence limit was reached.', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated));
+  assert.doesNotThrow(() => validateAgentCitations({ findings: [{ title: '覆盖范围受限', detail: '本次仅覆盖部分关键词与页面数据。', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated));
+});
+
+test('runtime deterministically adds a truncation disclosure without weakening citation checks', () => {
+  const truncated = { ...evidence, truncated: { metrics: false, breakdowns: true, competitors: false } };
+  const chinese = ensureAgentEvidenceDisclosure({ findings: [{ title: '关键词下降', detail: '曝光量下降。', evidenceRefs: ['metric:product:source:revenue'] }] }, truncated);
+  assert.match(chinese.findings[0]!.detail || '', /部分数据/);
+  assert.doesNotThrow(() => validateAgentCitations(chinese, truncated));
+  assert.throws(() => validateAgentCitations(ensureAgentEvidenceDisclosure({ findings: [{ title: '关键词下降', detail: '曝光量下降。', evidenceRefs: ['metric:missing'] }] }, truncated), truncated), /unknown evidence/);
 });
 
 test('agent validation also requires disclosure when granular breakdowns are truncated', () => {

@@ -1,13 +1,13 @@
-import { and, desc, eq, gte, inArray, lte, or } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { jsonText } from '@/db/dialect';
 import { agentConversations, agentGrowthMissions, agentProfiles, agentSkillManifests, aiProviderAccounts, aiUsageEvents, analysisRuns, competitorMetricPoints, competitors, metricPoints, productGoals, products } from '@/db/schema';
 import { decryptSecret } from './crypto';
-import { validateAgentCitations } from './agent-validation';
+import { ensureAgentEvidenceDisclosure, validateAgentCitations } from './agent-validation';
 import { addRollupValue, finishRollup, type RollupAccumulator } from './metric-rollup';
 import { calculateProductHealth } from './product-health';
-import { agentMetricAllowed, agentSpecialistDomains } from './agent-metric-policy';
+import { agentMetricAllowed, agentQueryableMetrics, agentSpecialistDomains } from './agent-metric-policy';
 import { buildConversationHistory } from './agent-conversation';
 import { buildCrossSignals } from './cross-signal';
 import { comparisonWindow, type AnalysisTrigger } from './analysis-window';
@@ -69,17 +69,21 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
   const start = day(window.startOffset);
   const split = day(window.splitOffset);
   const currentEnd = day(window.currentEndOffset);
-  const metricLimit = 20000;
+  const aggregateMetricLimit = 20000;
+  const breakdownMetricLimit = 20000;
   const competitorLimit = 5000;
   const allowed = agentAllowedMetrics(preset);
+  const queryableMetrics = agentQueryableMetrics(allowed);
   const domains = agentSpecialistDomains(preset);
   if (scope.mode === 'product' && !scope.productId) throw new Error('The product used by this Agent conversation is no longer available.');
   const productRows = await getDb().select({ id: products.id, name: products.name, domain: products.domain }).from(products).where(and(eq(products.workspaceId, workspaceId), scope.productId ? eq(products.id, scope.productId) : undefined));
   if (scope.productId && !productRows.length) throw new Error('The selected product was not found in this workspace.');
-  const metricPolicy = allowed.length ? domains.length ? or(inArray(metricPoints.metric, [...allowed]), and(eq(metricPoints.source, 'custom'), inArray(jsonText(metricPoints.dimensionsJson, 'domain'), domains))) : inArray(metricPoints.metric, [...allowed]) : undefined;
-  const competitorPolicy = allowed.length ? domains.length ? or(inArray(competitorMetricPoints.metric, [...allowed]), and(eq(competitorMetricPoints.source, 'custom'), inArray(jsonText(competitorMetricPoints.dimensionsJson, 'domain'), domains))) : inArray(competitorMetricPoints.metric, [...allowed]) : undefined;
-  const metricRows = await getDb().select().from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, start), lte(metricPoints.metricDate, currentEnd), metricPolicy)).orderBy(desc(metricPoints.metricDate)).limit(metricLimit + 1);
-  const rows = metricRows.slice(0, metricLimit);
+  const metricPolicy = allowed.length ? domains.length ? or(inArray(metricPoints.metric, queryableMetrics), and(eq(metricPoints.source, 'custom'), inArray(jsonText(metricPoints.dimensionsJson, 'domain'), domains))) : inArray(metricPoints.metric, queryableMetrics) : undefined;
+  const competitorPolicy = allowed.length ? domains.length ? or(inArray(competitorMetricPoints.metric, queryableMetrics), and(eq(competitorMetricPoints.source, 'custom'), inArray(jsonText(competitorMetricPoints.dimensionsJson, 'domain'), domains))) : inArray(competitorMetricPoints.metric, queryableMetrics) : undefined;
+  const metricScope = and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, start), lte(metricPoints.metricDate, currentEnd), metricPolicy);
+  const aggregateMetricRows = await getDb().select().from(metricPoints).where(and(metricScope, sql<boolean>`substr(${metricPoints.metric}, 1, 6) <> 'query_' and substr(${metricPoints.metric}, 1, 5) <> 'page_'`)).orderBy(desc(metricPoints.metricDate)).limit(aggregateMetricLimit + 1);
+  const breakdownMetricRows = await getDb().select().from(metricPoints).where(and(metricScope, sql<boolean>`substr(${metricPoints.metric}, 1, 6) = 'query_' or substr(${metricPoints.metric}, 1, 5) = 'page_'`)).orderBy(desc(metricPoints.metricDate)).limit(breakdownMetricLimit + 1);
+  const rows = [...aggregateMetricRows.slice(0, aggregateMetricLimit), ...breakdownMetricRows.slice(0, breakdownMetricLimit)];
   const allGoalDefinitions = await getDb().select().from(productGoals).where(and(eq(productGoals.workspaceId, workspaceId), scope.productId ? eq(productGoals.productId, scope.productId) : undefined, eq(productGoals.enabled, true)));
   const goalMetricRows = allGoalDefinitions.length ? await getDb().select({ productId: metricPoints.productId, source: metricPoints.source, metric: metricPoints.metric, metricDate: metricPoints.metricDate, value: metricPoints.value, dimensionsJson: metricPoints.dimensionsJson }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, day(window.currentEndOffset - 89)), lte(metricPoints.metricDate, currentEnd), inArray(metricPoints.metric, [...new Set(allGoalDefinitions.map((goal) => goal.metric))]))).orderBy(desc(metricPoints.metricDate)).limit(20000) : [];
   const goalDefinitions = allGoalDefinitions.filter((goal) => agentMetricAllowed(preset, allowed, goal.metric, null) || goalMetricRows.some((point) => point.productId === goal.productId && point.metric === goal.metric && (!goal.source || point.source === goal.source) && agentMetricAllowed(preset, allowed, point.metric, customMetricDomain(point.source, point.dimensionsJson))));
@@ -167,11 +171,11 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
     pointCount: eligibleMetricRows.length + eligibleCompetitorRows.length,
     eligibleSeriesCount: series.length,
     competitorPointCount: eligibleCompetitorRows.length,
-    truncated: { metrics: metricRows.length > metricLimit || rows.some((row) => metricIsTruncated(row.dimensionsJson)), breakdowns: dimensionGroups.size > selectedDimensionGroups.length, competitors: allCompetitorRows.length > competitorLimit },
+    truncated: { metrics: aggregateMetricRows.length > aggregateMetricLimit || breakdownMetricRows.length > breakdownMetricLimit || rows.some((row) => metricIsTruncated(row.dimensionsJson)), breakdowns: dimensionGroups.size > selectedDimensionGroups.length, competitors: allCompetitorRows.length > competitorLimit },
   };
 }
 
-export const AGENT_PROMPT_VERSION = '2026-09-01.2';
+export const AGENT_PROMPT_VERSION = '2026-09-01.4';
 export type EvidenceSkill = { id: string; slug: string; name: string; version: string; instructions: string; requiredMetrics: string[]; instructionHash: string; policyVersion: number };
 export type AgentProvider = typeof aiProviderAccounts.$inferSelect;
 
@@ -231,7 +235,7 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
       console.warn(JSON.stringify({ event: 'agent_provider_schema_invalid', attempt, providerId: provider.id, providerMode: provider.mode, model, finishReason: candidate.finishReason, textLength: candidate.text.length, issues: parsedOutput.error.issues.slice(0, 8).map((issue) => ({ code: issue.code, path: issue.path.join('.') })) }));
       throw new AgentOutputFormatError('The AI provider returned JSON that did not match the required Agent result structure. Try again.');
     }
-    try { return validateAgentCitations(parsedOutput.data, evidence); }
+    try { return validateAgentCitations(ensureAgentEvidenceDisclosure(parsedOutput.data, evidence), evidence); }
     catch (error) {
       const message = error instanceof Error ? error.message : '';
       const reason = /unknown product/i.test(message) ? 'unknown_product'

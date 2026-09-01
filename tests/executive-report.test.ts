@@ -9,14 +9,14 @@ test('scheduled Executive Brief specialists are validated, deduplicated, and can
   assert.throws(() => parseExecutiveSchedulePresets('not-json'), /invalid/);
 });
 
-test('scheduled Executive Brief report sections preserve every specialist run and cited evidence', () => {
+test('scheduled Executive Brief report sections hide internal run and evidence IDs', () => {
   const sections = formatExecutiveReportSections({
     specialists: [{ agent: 'Revenue Analyst', analysisRunId: 'run-revenue', summary: 'Revenue moved.', findingCount: 1 }, { agent: 'Operations Analyst', analysisRunId: 'run-operations', summary: 'Errors changed.', findingCount: 1 }],
     priorities: [{ title: 'Review conversion', detail: 'Revenue changed.', agent: 'Revenue Analyst', action: 'Inspect checkout.', confidence: 0.912, evidenceRefs: ['metric:revenue'], analysisRunId: 'run-revenue' }],
   });
-  assert.match(sections.specialists, /run-revenue/);
-  assert.match(sections.specialists, /run-operations/);
-  assert.match(sections.priorities, /metric:revenue/);
-  assert.match(sections.priorities, /Analysis run:\*\* run-revenue/);
+  assert.match(sections.specialists, /Revenue Analyst/);
+  assert.match(sections.specialists, /Operations Analyst/);
+  assert.doesNotMatch(sections.specialists, /run-revenue|run-operations/);
+  assert.doesNotMatch(sections.priorities, /metric:revenue|Analysis run:/);
   assert.match(sections.priorities, /91%/);
 });

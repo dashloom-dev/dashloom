@@ -214,7 +214,12 @@
 /* Compact console navigation and page-level information architecture. */
 .dashboard-route-loading { width:min(1320px,calc(100% - 64px)); min-height:70vh; margin:0 auto; display:grid; place-items:center; color:#8ea39b; }
 .dashboard-route-loading>i { position:fixed; z-index:50; top:0; left:280px; right:0; width:auto; height:3px; background:linear-gradient(90deg,transparent,var(--dash-accent),transparent); animation:dashboard-loading 1s ease-in-out infinite; }
+.dashboard-navigation-progress { position:fixed; z-index:50; top:0; left:280px; right:0; height:3px; overflow:hidden; color:transparent; background:rgba(84,230,173,.12); }
+.dashboard-navigation-progress i { display:block; width:38%; height:100%; background:linear-gradient(90deg,transparent,var(--dash-accent),transparent); animation:dashboard-loading 1s ease-in-out infinite; }
+.dashboard-nav-pending-dot { flex:0 0 auto; width:8px; height:8px; border:2px solid rgba(84,230,173,.25); border-top-color:var(--dash-accent); border-radius:50%; animation:dashboard-nav-spin .65s linear infinite; }
 @keyframes dashboard-loading { from { transform:translateX(-120%); } to { transform:translateX(360%); } }
+@keyframes dashboard-nav-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce){.dashboard-nav-pending-dot,.dashboard-navigation-progress i{animation:none}}
 .dashboard-tabs { display:grid; gap:20px; }
 .dashboard-tab-list { position:sticky; z-index:8; top:12px; padding:7px; display:grid; grid-template-columns:repeat(var(--dashboard-tab-count,4),minmax(0,1fr)); gap:6px; border:1px solid rgba(142,185,171,.17); border-radius:13px; background:rgba(4,20,27,.94); box-shadow:0 14px 40px rgba(0,0,0,.22); backdrop-filter:blur(16px); }
 .dashboard-tab-list button { min-width:0; min-height:66px; padding:10px 14px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:4px; color:#8ba198; border:1px solid transparent; border-radius:9px; background:transparent; cursor:pointer; text-align:left; }

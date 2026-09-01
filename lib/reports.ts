@@ -37,7 +37,7 @@ export async function generateWorkspaceReport(workspaceId: string, preset: Agent
   ]);
   const brandName = 'Dashloom';
   const title = `${brandName} · ${scopeLabel} · ${agentDefinitions[preset].name} ${cadence === 'manual' ? 'brief' : `${cadence} report`} · ${end}`;
-  const sections = analysis.findings.findings.map((finding) => `## ${finding.title}\n\n${finding.detail}\n\n**Next action:** ${finding.action}\n\n**Confidence:** ${Math.round(finding.confidence * 100)}%\n\n**Evidence:** ${finding.evidenceRefs.length ? finding.evidenceRefs.join(', ') : 'See frozen analysis evidence'}`).join('\n\n');
+  const sections = analysis.findings.findings.map((finding) => `## ${finding.title}\n\n${finding.detail}\n\n**Next action:** ${finding.action}\n\n**Confidence:** ${Math.round(finding.confidence * 100)}%`).join('\n\n');
   const actionDigest = formatAgentActionDigest(openActions);
   const attribution = `Prepared by ${brandName} Community.`;
   const report = { id: crypto.randomUUID(), workspaceId, scopeMode: scope.mode, productId: scope.productId, analysisRunId: analysis.runId, idempotencyKey: idempotencyKey || null, cadence, periodStart: start, periodEnd: end, title, summary: analysis.findings.summary, contentMarkdown: `# ${title}\n\n**Evidence scope:** ${scopeLabel}\n\n${analysis.findings.summary}\n\n${actionDigest}\n\n${sections}\n\n---\n\n${attribution}`, status: 'ready' as const };

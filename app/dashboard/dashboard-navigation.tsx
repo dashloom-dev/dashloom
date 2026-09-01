@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, type ReactNode } from 'react';
 import {
   BarChart3, Bot, Boxes, Cable, ChartNoAxesCombined, ChevronDown, Clock3, Gauge,
   Layers3, LayoutDashboard, ListChecks, Plus, RadioTower, Rocket, Settings, Store, Target,
@@ -39,6 +40,18 @@ function matches(pathname: string, href: string, exact = false) {
   return exact || href === '/dashboard' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function NavigationPending({ zh }: { zh: boolean }) {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return <><i className="dashboard-nav-pending-dot" aria-hidden="true" /><span className="dashboard-navigation-progress" role="status"><i /><span className="sr-only">{zh ? '正在加载页面' : 'Loading page'}</span></span></>;
+}
+
+function NavigationLink({ href, className, current, zh, children }: { href: string; className?: string; current: boolean; zh: boolean; children: ReactNode }) {
+  const [prefetch, setPrefetch] = useState<true | null>(null);
+  const prime = () => setPrefetch(true);
+  return <Link className={className} aria-current={current ? 'page' : undefined} href={href} prefetch={prefetch} onMouseEnter={prime} onFocus={prime} onTouchStart={prime}>{children}<NavigationPending zh={zh} /></Link>;
+}
+
 export function DashboardNavigation({ locale }: { locale: 'en' | 'zh' }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -47,10 +60,10 @@ export function DashboardNavigation({ locale }: { locale: 'en' | 'zh' }) {
     {groups.map((group) => {
       const active = group.href ? matches(pathname, group.href) : group.children?.some((item) => matches(pathname, item.href, item.exact)) || false;
       const Icon = group.icon;
-      if (group.href) return <Link className="dashboard-nav-primary" aria-current={active ? 'page' : undefined} href={group.href} key={group.href}><Icon size={19} /><span>{zh ? group.zh : group.en}</span></Link>;
+      if (group.href) return <NavigationLink className="dashboard-nav-primary" current={active} href={group.href} key={group.href} zh={zh}><Icon size={19} /><span>{zh ? group.zh : group.en}</span></NavigationLink>;
       return <details className="dashboard-nav-group" open={active || group.en === 'Products' || group.en === 'Data'} key={group.en}>
         <summary aria-current={active ? 'true' : undefined} onClick={(event) => { if (group.mobileHref && window.matchMedia('(max-width: 620px)').matches) { event.preventDefault(); router.push(group.mobileHref); } }}><Icon size={19} /><span>{zh ? group.zh : group.en}</span><ChevronDown className="nav-chevron" size={15} /></summary>
-        <div>{group.children?.map((item) => { const ItemIcon = item.icon; const itemActive = matches(pathname, item.href, item.exact); return <Link aria-current={itemActive ? 'page' : undefined} href={item.href} key={item.href}><ItemIcon size={16} /><span>{zh ? item.zh : item.en}</span></Link>; })}</div>
+        <div>{group.children?.map((item) => { const ItemIcon = item.icon; const itemActive = matches(pathname, item.href, item.exact); return <NavigationLink current={itemActive} href={item.href} key={item.href} zh={zh}><ItemIcon size={16} /><span>{zh ? item.zh : item.en}</span></NavigationLink>; })}</div>
       </details>;
     })}
   </nav>;

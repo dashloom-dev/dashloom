@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './readability.css';
 import { DocumentLanguage } from './document-language';
+import { InstantInteractionFeedback } from './instant-interaction-feedback';
+import { Suspense } from 'react';
 
 
 export const metadata: Metadata = {
@@ -20,5 +22,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><DocumentLanguage />{children}</body></html>;
+  return <html lang="en"><body><DocumentLanguage /><Suspense fallback={null}><InstantInteractionFeedback /></Suspense>{children}</body></html>;
 }

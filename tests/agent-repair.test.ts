@@ -17,3 +17,9 @@ test('agent repair request is bounded, deduplicated, and treats the draft as unt
   assert.deepEqual(prompt.productIds, ['product-1']);
   assert.ok(prompt.rules.some((rule) => /incomplete/i.test(rule)));
 });
+
+test('agent repair treats truncated breakdown evidence as incomplete', () => {
+  const request = buildAgentRepairRequest({ draft: '{}', evidenceIds: ['metric:one'], productIds: ['product-1'], truncated: { breakdowns: true } });
+  const prompt = JSON.parse(request.prompt) as { rules: string[] };
+  assert.ok(prompt.rules.some((rule) => /exact sentence.*incomplete/i.test(rule)));
+});

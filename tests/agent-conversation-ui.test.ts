@@ -14,6 +14,7 @@ test('Agent conversation UI keeps history inside the page and guards active runs
   assert.match(page, /<ConversationList[^>]+zh=\{zh\}/);
   assert.match(page, /parseAnalysisRequestQuestion/);
   assert.match(page, /agent-process/);
+  assert.match(page, /AgentConversationPane/);
   assert.doesNotMatch(page, /subscriptionCreditsRemaining|purchasedCreditsRemaining/);
 
   assert.match(form, /beforeunload/);
@@ -23,6 +24,8 @@ test('Agent conversation UI keeps history inside the page and guards active runs
   assert.match(form, /Shift \+ Enter/);
   assert.match(form, /requestAnimationFrame/);
   assert.match(form, /startsNewConversation/);
+  assert.match(form, /nextConversationId && nextConversationId !== conversationId/);
+  assert.match(form, /router\.push\(`\/dashboard\/agent\?conversation=\$\{nextConversationId\}`\);[\s\S]+else router\.refresh\(\)/);
   assert.match(form, /Changing scope creates a new conversation/);
 
   assert.match(route, /application\/x-ndjson/);

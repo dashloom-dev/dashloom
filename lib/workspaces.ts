@@ -1,10 +1,10 @@
-import { and, eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { cache } from 'react';
 import { getDb } from '@/db';
 import { workspaceMembers, workspacePreferences, workspaces } from '@/db/schema';
 
-export async function getPrimaryWorkspace(userId: string) {
+export const getPrimaryWorkspace = cache(async (userId: string) => {
   const db = getDb();
-  const [preference] = await db.select({ activeWorkspaceId: workspacePreferences.activeWorkspaceId }).from(workspacePreferences).where(eq(workspacePreferences.userId, userId)).limit(1);
   const [membership] = await db
     .select({
       id: workspaces.id,
@@ -14,16 +14,19 @@ export async function getPrimaryWorkspace(userId: string) {
       locale: workspaces.locale,
       timezone: workspaces.timezone,
       role: workspaceMembers.role,
+      activeWorkspaceId: workspacePreferences.activeWorkspaceId,
     })
     .from(workspaceMembers)
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-    .where(preference ? and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.workspaceId, preference.activeWorkspaceId)) : eq(workspaceMembers.userId, userId))
+    .leftJoin(workspacePreferences, eq(workspacePreferences.userId, userId))
+    .where(eq(workspaceMembers.userId, userId))
+    .orderBy(sql`case when ${workspaceMembers.workspaceId} = ${workspacePreferences.activeWorkspaceId} then 0 else 1 end`, workspaces.name)
     .limit(1);
-  if (membership) return membership;
-  const [fallback] = await db.select({ id: workspaces.id, slug: workspaces.slug, name: workspaces.name, plan: workspaces.plan, locale: workspaces.locale, timezone: workspaces.timezone, role: workspaceMembers.role }).from(workspaceMembers).innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id)).where(eq(workspaceMembers.userId, userId)).limit(1);
-  if (fallback) await db.insert(workspacePreferences).values({ userId, activeWorkspaceId: fallback.id }).onConflictDoUpdate({ target: workspacePreferences.userId, set: { activeWorkspaceId: fallback.id, updatedAt: new Date().toISOString() } });
-  return fallback ?? null;
-}
+  if (!membership) return null;
+  const { activeWorkspaceId, ...workspace } = membership;
+  if (activeWorkspaceId !== workspace.id) await db.insert(workspacePreferences).values({ userId, activeWorkspaceId: workspace.id }).onConflictDoUpdate({ target: workspacePreferences.userId, set: { activeWorkspaceId: workspace.id, updatedAt: new Date().toISOString() } });
+  return workspace;
+});
 
 export async function listUserWorkspaces(userId: string) {
   return getDb().select({ id: workspaces.id, slug: workspaces.slug, name: workspaces.name, plan: workspaces.plan, role: workspaceMembers.role }).from(workspaceMembers).innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id)).where(eq(workspaceMembers.userId, userId)).orderBy(workspaces.name);
