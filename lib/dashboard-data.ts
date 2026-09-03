@@ -2,12 +2,11 @@ import { and, eq, gte, notInArray } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { metricPoints, products } from '@/db/schema';
 import { addRollupValue, finishRollup, type RollupAccumulator } from './metric-rollup';
+import { dashboardBreakdownMetrics } from './dashboard-summary';
 
 export type DashboardPoint = { productId: string; source: string; metric: string; metricDate: string; value: number; dimensionsJson: string };
 export type DashboardProduct = { id: string; name: string; domain: string | null; category: string | null; status: 'active' | 'paused' | 'archived' };
 export type MetricSeries = { metric: string; source: string; values: Array<{ date: string; value: number }>; current: number; previous: number; latestDate: string };
-
-const dashboardBreakdownMetrics = ['query_clicks', 'query_impressions', 'query_position', 'page_clicks', 'page_impressions', 'page_position'];
 
 export function dateOffset(offset: number) { return new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10); }
 

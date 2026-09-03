@@ -1,7 +1,7 @@
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import { Activity, ArrowUpRight, Bot, Boxes, Check, CircleAlert, DollarSign, Users } from 'lucide-react';
+import { and, desc, eq, gte, inArray, lte, max, notInArray, sql } from 'drizzle-orm';
+import { ArrowDownRight, ArrowUpRight, Bot, Boxes, CalendarDays, Check, CircleAlert, Database } from 'lucide-react';
 import { getDb } from '@/db';
-import { agentActions, aiProviderAccounts, analysisRuns, connectorAccounts, metricPoints, productConnectorMappings, productGoals, products, reportSchedules, syncRuns, workspaces } from '@/db/schema';
+import { agentActions, aiProviderAccounts, analysisRuns, connectorAccounts, dashboardViews, metricPoints, productConnectorMappings, productGoals, products, reportSchedules, syncRuns, workspaces } from '@/db/schema';
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
 import { addRollupValue, finishRollup, type RollupAccumulator } from '@/lib/metric-rollup';
@@ -10,6 +10,9 @@ import { buildActivationProgress, buildFirstValueGuide } from '@/lib/activation-
 import { evaluateProductGoals } from '@/lib/product-goals';
 import Link from 'next/link';
 import { getDeploymentLocale } from '@/lib/deployment-locale';
+import { dashboardComparisonWindow } from '@/lib/dashboard-period';
+import { dashboardTemplates, parseDashboardConfiguration } from '@/lib/dashboard-templates';
+import { aggregateDashboardRows, buildDashboardMetricCards, selectDashboardMetrics, dashboardBreakdownMetrics, humanize, formatMetric } from '@/lib/dashboard-summary';
 
 export default async function DashboardOverview() {
   const { user } = await requireServerSession();
@@ -18,9 +21,10 @@ export default async function DashboardOverview() {
   const zh = getDeploymentLocale() === 'zh';
 
   const db = getDb();
-  const [productRows, metricRows, recentSyncs, healthPoints, healthDates, latestAnalysisRows, openActions, sourceMappings, connectedProviders, actedOnFindings, enabledSchedules, activeGoalRows, goalMetricRows] = await Promise.all([
+  const [defaultDashboardView] = await db.select().from(dashboardViews).where(and(eq(dashboardViews.workspaceId, workspace.id), eq(dashboardViews.preset, 'indie_hacker'), eq(dashboardViews.isDefault, true))).limit(1);
+  const metricScope = and(eq(metricPoints.workspaceId, workspace.id), defaultDashboardView?.productId ? eq(metricPoints.productId, defaultDashboardView.productId) : undefined, notInArray(metricPoints.metric, dashboardBreakdownMetrics));
+  const [productRows, recentSyncs, healthPoints, healthDates, latestAnalysisRows, openActions, sourceMappings, connectedProviders, actedOnFindings, enabledSchedules, activeGoalRows, goalMetricRows, [latestMetricPoint]] = await Promise.all([
     db.select().from(products).where(and(eq(products.workspaceId, workspace.id), eq(products.status, 'active'))).orderBy(products.name),
-    db.select({ metric: metricPoints.metric, dimensionsJson: metricPoints.dimensionsJson, value: sql<number>`sum(${metricPoints.value})` }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspace.id), gte(metricPoints.metricDate, sql`date('now', '-29 days')`))).groupBy(metricPoints.metric, metricPoints.dimensionsJson),
     db.select().from(syncRuns).where(eq(syncRuns.workspaceId, workspace.id)).orderBy(desc(syncRuns.createdAt)).limit(6),
     db.select().from(metricPoints).where(and(eq(metricPoints.workspaceId, workspace.id), gte(metricPoints.metricDate, sql`date('now', '-13 days')`))).orderBy(metricPoints.metricDate).limit(5000),
     db.select({ split: sql<string>`date('now', '-6 days')` }).from(workspaces).where(eq(workspaces.id, workspace.id)).limit(1),
@@ -32,12 +36,15 @@ export default async function DashboardOverview() {
     db.select({ id: reportSchedules.id }).from(reportSchedules).where(and(eq(reportSchedules.workspaceId, workspace.id), eq(reportSchedules.enabled, true))).limit(1),
     db.select({ goal: productGoals, productName: products.name }).from(productGoals).innerJoin(products, eq(productGoals.productId, products.id)).where(and(eq(productGoals.workspaceId, workspace.id), eq(productGoals.enabled, true))).orderBy(productGoals.name),
     db.select({ productId: metricPoints.productId, source: metricPoints.source, metric: metricPoints.metric, metricDate: metricPoints.metricDate, value: metricPoints.value, dimensionsJson: metricPoints.dimensionsJson }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspace.id), gte(metricPoints.metricDate, sql`date('now', '-89 days')`))).limit(20000),
+    db.select({ metricDate: max(metricPoints.metricDate) }).from(metricPoints).where(metricScope),
   ]);
-  const totals = new Map<string, number>(); for (const row of metricRows) totals.set(row.metric, (totals.get(row.metric) || 0) + Number(row.value || 0));
-  const users = totals.get('active_users') || totals.get('users') || 0;
-  const revenueByCurrency = new Map<string, number>(); for (const row of metricRows.filter((item) => item.metric === 'revenue')) { let currency = 'UNSPECIFIED'; try { const dimensions = JSON.parse(row.dimensionsJson) as { currency?: unknown }; if (typeof dimensions.currency === 'string' && /^[a-z]{3}$/i.test(dimensions.currency)) currency = dimensions.currency.toUpperCase(); } catch { /* legacy rows remain explicitly unclassified */ } revenueByCurrency.set(currency, (revenueByCurrency.get(currency) || 0) + Number(row.value || 0)); }
-  const revenue = revenueByCurrency.size ? [...revenueByCurrency].map(([currency, value]) => currency === 'UNSPECIFIED' ? `${formatNumber(value)} (currency unset)` : formatCurrency(value, currency)).join(' · ') : formatCurrency(0, 'USD');
-  const requests = totals.get('requests') || 0;
+  const overviewDates = dashboardComparisonWindow(latestMetricPoint?.metricDate, 30);
+  const currentMetricRows = overviewDates ? await db.selectDistinct({ metric: metricPoints.metric }).from(metricPoints).where(and(metricScope, gte(metricPoints.metricDate, overviewDates.split), lte(metricPoints.metricDate, overviewDates.end))) : [];
+  const configuredMetrics = defaultDashboardView ? parseDashboardConfiguration(defaultDashboardView.configurationJson).metrics : undefined;
+  const overviewMetrics = selectDashboardMetrics(currentMetricRows.map((row) => row.metric), configuredMetrics || dashboardTemplates.indie_hacker.metrics);
+  const overviewPoints = overviewDates && overviewMetrics.length ? await db.select().from(metricPoints).where(and(metricScope, inArray(metricPoints.metric, overviewMetrics), gte(metricPoints.metricDate, overviewDates.start), lte(metricPoints.metricDate, overviewDates.end))).orderBy(desc(metricPoints.metricDate)).limit(30000) : [];
+  const overviewCards = buildDashboardMetricCards(overviewMetrics, aggregateDashboardRows(overviewPoints, overviewDates?.split || ''));
+  const currentPointCount = overviewPoints.filter((point) => point.metricDate >= (overviewDates?.split || '')).length;
   const empty = productRows.length === 0;
   const split = healthDates[0]?.split || '9999-12-31'; const emptyRollup = (): RollupAccumulator => ({ sum: 0, count: 0, latestDate: '', latestValue: 0 });
   const healthAggregates = new Map<string, { productId: string; source: string; metric: string; current: RollupAccumulator; previous: RollupAccumulator; freshness: string }>();
@@ -50,16 +57,17 @@ export default async function DashboardOverview() {
 
   return <div className="app-page">
     <header className="app-page-head"><div><span>{zh ? '工作空间总览' : 'WORKSPACE OVERVIEW'}</span><h1>{zh ? `你好，${user.name.split(' ')[0]}。` : `Good morning, ${user.name.split(' ')[0]}.`}</h1><p>{empty ? (zh ? '添加第一个产品，开始连接真实数据。' : 'Add your first product to begin connecting real data.') : (zh ? `正在监控工作空间中的 ${productRows.length} 个活跃产品。` : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`)}</p></div><LinkButton zh={zh} /></header>
+    <section className="dashboard-status-strip overview-status-strip">
+      <div><Boxes size={17} /><span>{zh ? '活跃产品' : 'Active products'}</span><strong>{productRows.length}</strong></div>
+      <div><CalendarDays size={17} /><span>{zh ? '最新数据日' : 'Latest data date'}</span><strong>{overviewDates?.end || '—'}</strong></div>
+      <div><Database size={17} /><span>{zh ? '本期数据点' : 'Current-period points'}</span><strong>{currentPointCount.toLocaleString(zh ? 'zh-CN' : 'en-US')}</strong></div>
+    </section>
+    {overviewCards.length ? <section className="dashboard-kpi-grid overview-kpi-grid">{overviewCards.map((card) => <article key={`${card.metric}:${card.currency || ''}`}><header><span>{humanize(card.metric, zh ? 'zh' : 'en')}{card.currency ? ` · ${card.currency.toUpperCase()}` : ''}</span><b>{zh ? '30 天' : '30 days'}</b></header><strong>{formatMetric(card.metric, card.current, card.currency, zh ? 'zh' : 'en')}</strong><footer><OverviewMetricChange change={card.change} zh={zh} /><small>{zh ? '对比前 30 天' : 'vs previous 30 days'}</small></footer></article>)}</section> : <section className="app-panel overview-metric-empty"><Database size={24} /><span>{zh ? '同步数据后，这里会展示数据大盘中的真实指标。' : 'Sync data to show the same real metrics used by the data dashboard.'}</span></section>}
+    <p className="context-note">{zh ? `数据范围：${overviewDates?.split || '—'} 至 ${overviewDates?.end || '—'}；与数据大盘的默认视图一致。` : `Data range: ${overviewDates?.split || '—'} to ${overviewDates?.end || '—'}; matches the default data dashboard view.`} <Link href="/dashboard/views/indie_hacker?range=30">{zh ? '打开数据大盘 →' : 'Open data dashboard →'}</Link></p>
     {!firstValue.complete && <section className="first-value-guide">
       <header><div><span>{zh ? '快速开始' : 'GET STARTED'}</span><h2>{zh ? '获得第一个基于证据的答案' : 'Reach your first evidence-backed answer'}</h2><p>{zh ? '三个步骤把新工作空间变成可用的产品简报，所有进度都来自真实数据。' : 'Three steps turn a new workspace into a useful product brief.'}</p></div><b>{firstValue.completed}/{firstValue.total}</b></header>
       <div className="first-value-steps">{firstValue.steps.map((step, index) => <article key={step.id} data-state={step.state}><i>{step.complete ? <Check size={17} /> : index + 1}</i><div><span>{step.state === 'current' ? (zh ? '下一步' : 'DO THIS NEXT') : step.complete ? (zh ? '已完成' : 'COMPLETE') : (zh ? '稍后进行' : 'COMING UP')}</span><h3>{step.title}</h3><p>{step.description}</p>{step.state === 'current' && <Link className="app-primary" href={step.href}>{step.action} →</Link>}</div></article>)}</div>
     </section>}
-    <section className="real-metric-grid">
-      <Metric icon={<Activity />} label={zh ? '产品' : 'Products'} value={String(productRows.length)} note={zh ? '当前工作空间中的活跃产品' : 'Active in this workspace'} />
-      <Metric icon={<Users />} label={zh ? '活跃用户' : 'Active users'} value={formatNumber(users)} note={zh ? '最近 30 天' : 'Last 30 days'} />
-      <Metric icon={<DollarSign />} label={zh ? '收入' : 'Revenue'} value={revenue} note={zh ? '最近 30 天 · 按币种分开' : 'Last 30 days · currencies separated'} />
-      <Metric icon={<ArrowUpRight />} label={zh ? '请求量' : 'Requests'} value={formatNumber(requests)} note={zh ? '最近 30 天' : 'Last 30 days'} />
-    </section>
     {firstValue.complete && <section className="activation-center" data-activated={activation.activated}>
       <header><div><span>FIRST VALUE PATH</span><h2>{activation.activated ? 'Your Agent operating loop is active.' : `${activation.completed} of ${activation.total} milestones complete`}</h2><p>{activation.next ? `Next: ${activation.next.title}. ${activation.next.description}` : 'Real evidence now flows from collection through analysis, action, and recurring delivery.'}</p></div><strong>{Math.round((activation.completed / activation.total) * 100)}%</strong></header>
       <div className="activation-progress" role="progressbar" aria-label="First value path" aria-valuemin={0} aria-valuemax={activation.total} aria-valuenow={activation.completed}><i style={{ width: `${(activation.completed / activation.total) * 100}%` }} /></div>
@@ -75,10 +83,6 @@ export default async function DashboardOverview() {
   </div>;
 }
 
-function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: string; value: string; note: string }) {
-  return <article><div>{icon}</div><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
-}
-function formatNumber(value: number) { return Intl.NumberFormat('en', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value); }
-function formatCurrency(value: number, currency: string) { return Intl.NumberFormat('en-US', { style: 'currency', currency, notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value); }
+function OverviewMetricChange({ change, zh }: { change: number | null; zh: boolean }) { if (change === null) return <span className="metric-change" data-tone="neutral">—</span>; const positive = change >= 0; return <span className="metric-change" data-tone={positive ? 'positive' : 'negative'}>{positive ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}{Math.abs(change).toFixed(1)}%{zh ? ' 较上期' : ' vs prior'}</span>; }
 function LinkButton({ zh }: { zh: boolean }) { return <Link className="app-primary" href="/dashboard/sources">{zh ? '连接数据源' : 'Connect data source'}</Link>; }
 function EmptyProducts() { return <div className="panel-empty"><Boxes size={28} /><p>No fictional products here. Add the first product you actually operate.</p><a href="/dashboard/products">Add a product</a></div>; }
