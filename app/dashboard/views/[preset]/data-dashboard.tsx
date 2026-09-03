@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lte, max } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, max, notInArray } from 'drizzle-orm';
 import Link from 'next/link';
 import { Activity, ArrowDownRight, ArrowUpRight, CalendarDays, CircleCheck, CircleDashed, Database, RefreshCw } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -7,17 +7,16 @@ import { getDb } from '@/db';
 import { analysisRuns, dashboardViews, metricPoints, products, syncRuns } from '@/db/schema';
 import { requireServerSession } from '@/lib/session';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
-import { addRollupValue, finishRollup, metricRollup, type RollupAccumulator } from '@/lib/metric-rollup';
+import { addRollupValue, finishRollup, type RollupAccumulator } from '@/lib/metric-rollup';
 import { dashboardTemplates, parseDashboardConfiguration, type DashboardPreset } from '@/lib/dashboard-templates';
 import { agentResultSchema } from '@/lib/agent';
 import { getDeploymentLocale } from '@/lib/deployment-locale';
 import { dashboardComparisonWindow } from '@/lib/dashboard-period';
+import { aggregateDashboardRows, buildDashboardMetricCards, selectDashboardMetrics, dashboardBreakdownMetrics, humanize, formatMetric } from '@/lib/dashboard-summary';
 import { DataChart } from '../../data-chart';
 
 type DashboardLocale = 'en' | 'zh';
 type SearchQuery = { view?: string; range?: string; metric?: string };
-type DashboardRow = { productId: string; product: string; metric: string; currency: string | null; current: number; previous: number; change: number | null; latestDate: string };
-const metricPriority = ['revenue', 'mrr', 'active_users', 'users', 'paid_customers', 'clicks', 'impressions', 'requests', 'errors', 'repo_stars', 'repo_commits'];
 const chartColors = ['#59dbae', '#68a8ff', '#a983ff', '#f2b84b', '#ff8177', '#62c9d8'];
 
 export async function DataDashboardPage({ params, searchParams }: { params: Promise<{ preset: string }>; searchParams: Promise<SearchQuery> }) {
@@ -42,7 +41,7 @@ export async function DataDashboardPage({ params, searchParams }: { params: Prom
     : [];
   const agentBriefing = sourceRun?.findingsJson ? parseAgentBriefing(sourceRun.findingsJson) : null;
   const productFilter = savedView?.productId ? and(eq(products.workspaceId, workspace.id), eq(products.id, savedView.productId)) : eq(products.workspaceId, workspace.id);
-  const metricScope = and(eq(metricPoints.workspaceId, workspace.id), savedView?.productId ? eq(metricPoints.productId, savedView.productId) : undefined);
+  const metricScope = and(eq(metricPoints.workspaceId, workspace.id), savedView?.productId ? eq(metricPoints.productId, savedView.productId) : undefined, notInArray(metricPoints.metric, dashboardBreakdownMetrics));
   const [productRows, [latestPoint], recentSyncRows] = await Promise.all([
     db.select().from(products).where(productFilter).orderBy(products.name),
     db.select({ metricDate: max(metricPoints.metricDate) }).from(metricPoints).where(metricScope),
@@ -50,18 +49,15 @@ export async function DataDashboardPage({ params, searchParams }: { params: Prom
   ]);
   const dates = dashboardComparisonWindow(latestPoint?.metricDate, range);
   const currentMetricRows = dates ? await db.selectDistinct({ metric: metricPoints.metric }).from(metricPoints).where(and(metricScope, gte(metricPoints.metricDate, dates.split), lte(metricPoints.metricDate, dates.end))) : [];
-  const availableMetrics = currentMetricRows.map((row) => row.metric);
-  const configuredMetrics = configuration.metrics || [...template.metrics];
-  const orderedAvailable = [...availableMetrics].sort((a, b) => rankMetric(a) - rankMetric(b) || a.localeCompare(b));
-  const dashboardMetrics = [...new Set([...configuredMetrics.filter((metric) => availableMetrics.includes(metric)), ...orderedAvailable])].slice(0, 6);
+  const dashboardMetrics = selectDashboardMetrics(currentMetricRows.map((row) => row.metric), configuration.metrics || template.metrics);
   const pointRows = dates && dashboardMetrics.length
     ? await db.select().from(metricPoints).where(and(metricScope, inArray(metricPoints.metric, dashboardMetrics), gte(metricPoints.metricDate, dates.start), lte(metricPoints.metricDate, dates.end))).orderBy(desc(metricPoints.metricDate)).limit(30000)
     : [];
   const byProduct = new Map(productRows.map((product) => [product.id, product]));
-  const aggregates = aggregateRows(pointRows.filter((point) => dashboardMetrics.includes(point.metric)), dates?.split || '', byProduct);
+  const aggregates = aggregateDashboardRows(pointRows, dates?.split || '').map((row) => ({ ...row, product: byProduct.get(row.productId)?.name || row.productId }));
   const selectedMetric = dashboardMetrics.includes(query.metric || '') ? query.metric! : dashboardMetrics[0] || '';
-  const metricCards = buildMetricCards(dashboardMetrics, aggregates);
-  const selectedRows = aggregates.filter((row) => row.metric === selectedMetric).sort((a, b) => b.current - a.current);
+  const metricCards = buildDashboardMetricCards(dashboardMetrics, aggregates);
+  const selectedRows = aggregates.filter((row) => row.metric === selectedMetric && row.currentCount > 0).sort((a, b) => b.current - a.current);
   const trendLines = buildTrendLines(pointRows, selectedMetric, dates?.split || '', byProduct);
   const lastCollectedAt = pointRows.map((point) => point.collectedAt).sort().at(-1) || null;
   const latestSyncBySource = new Map<string, (typeof recentSyncRows)[number]>();
@@ -86,16 +82,7 @@ export async function DataDashboardPage({ params, searchParams }: { params: Prom
 }
 
 function accumulator(): RollupAccumulator { return { sum: 0, count: 0, latestDate: '', latestValue: 0 }; }
-function rankMetric(metric: string) { const index = metricPriority.indexOf(metric); return index === -1 ? metricPriority.length : index; }
-function aggregateRows(pointRows: Array<typeof metricPoints.$inferSelect>, split: string, byProduct: Map<string, typeof products.$inferSelect>) { const aggregates = new Map<string, { metric: string; currency: string | null; current: RollupAccumulator; previous: RollupAccumulator }>(); for (const point of pointRows) { const currency = metricCurrency(point.dimensionsJson); const key = `${point.productId}\u0000${point.metric}\u0000${currency || ''}`; const aggregate = aggregates.get(key) || { metric: point.metric, currency, current: accumulator(), previous: accumulator() }; addRollupValue(point.metricDate >= split ? aggregate.current : aggregate.previous, point.metricDate, point.value); aggregates.set(key, aggregate); } return [...aggregates].map(([key, value]) => { const [productId] = key.split('\u0000'); const current = finishRollup(value.metric, value.current); const previous = finishRollup(value.metric, value.previous); return { productId, product: byProduct.get(productId)?.name || productId, metric: value.metric, currency: value.currency, current, previous, change: previous ? ((current - previous) / Math.abs(previous)) * 100 : null, latestDate: value.current.latestDate } satisfies DashboardRow; }); }
-function buildMetricCards(metrics: string[], rows: DashboardRow[]) { return metrics.flatMap((metric) => { const currencies = [...new Set(rows.filter((row) => row.metric === metric).map((row) => row.currency))]; return currencies.map((currency) => { const metricRows = rows.filter((row) => row.metric === metric && row.currency === currency); const rollup = metricRollup(metric); const current = combine(metricRows.map((row) => row.current), rollup); const previous = combine(metricRows.map((row) => row.previous), rollup); return { metric, currency, current, change: previous ? ((current - previous) / Math.abs(previous)) * 100 : null }; }); }).slice(0, 6); }
-function combine(values: number[], rollup: ReturnType<typeof metricRollup>) { if (!values.length) return 0; return rollup === 'average' ? values.reduce((sum, value) => sum + value, 0) / values.length : values.reduce((sum, value) => sum + value, 0); }
 function buildTrendLines(pointRows: Array<typeof metricPoints.$inferSelect>, metric: string, split: string, byProduct: Map<string, typeof products.$inferSelect>) { const grouped = new Map<string, Map<string, RollupAccumulator>>(); for (const point of pointRows.filter((item) => item.metric === metric && item.metricDate >= split)) { const daily = grouped.get(point.productId) || new Map<string, RollupAccumulator>(); const value = daily.get(point.metricDate) || accumulator(); addRollupValue(value, point.metricDate, point.value); daily.set(point.metricDate, value); grouped.set(point.productId, daily); } return [...grouped].map(([productId, daily], index) => ({ label: byProduct.get(productId)?.name || productId, color: chartColors[index % chartColors.length], points: [...daily].sort(([a], [b]) => a.localeCompare(b)).map(([date, value]) => ({ date, value: finishRollup(metric, value) })) })).filter((line) => line.points.length).sort((a, b) => (b.points.at(-1)?.value || 0) - (a.points.at(-1)?.value || 0)).slice(0, 6); }
 function MetricChange({ change, zh, compact = false }: { change: number | null; zh: boolean; compact?: boolean }) { if (change === null) return <span className="metric-change" data-tone="neutral">—</span>; const positive = change >= 0; return <span className="metric-change" data-tone={positive ? 'positive' : 'negative'}>{positive ? <ArrowUpRight size={compact ? 13 : 15} /> : <ArrowDownRight size={compact ? 13 : 15} />}{Math.abs(change).toFixed(1)}%{compact ? '' : zh ? ' 较上期' : ' vs prior'}</span>; }
-function humanize(value: string, locale: DashboardLocale) { const labels: Record<string, string> = { active_users: '活跃用户', users: '用户数', revenue: '收入', mrr: '月度经常性收入', paid_customers: '付费客户', clicks: '点击数', impressions: '展示次数', requests: '请求数', errors: '错误数', repo_stars: '仓库星标', repo_commits: '代码提交' }; if (locale === 'zh' && labels[value]) return labels[value]; return value.replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase()); }
 function parseAgentBriefing(value: string) { try { return agentResultSchema.parse(JSON.parse(value)); } catch { return null; } }
-function metricCurrency(dimensionsJson: string) { try { const value = JSON.parse(dimensionsJson) as { currency?: unknown }; return typeof value.currency === 'string' && /^[a-z]{3}$/i.test(value.currency) ? value.currency.toLowerCase() : null; } catch { return null; } }
-function formatMetric(metric: string, value: number, currency: string | null = null, locale: DashboardLocale = 'en') { const numberLocale = locale === 'zh' ? 'zh-CN' : 'en-US'; if (metric.includes('revenue') || metric === 'mrr' || metric === 'refunds') return currency ? new Intl.NumberFormat(numberLocale, { style: 'currency', currency: currency.toUpperCase(), notation: Math.abs(value) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value) : `${new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 1 }).format(value)}${locale === 'zh' ? '（未设置币种）' : ' (currency unset)'}`; if (metric === 'ctr' || metric.includes('rate')) return `${(value * (value <= 1 ? 100 : 1)).toFixed(1)}%`; if (metric.endsWith('_bytes')) return formatBytes(value, numberLocale); if (metric.endsWith('_duration_ms')) return formatDuration(value, locale); if (metric.includes('cpu') || metric.includes('time') || metric === 'position') return value.toFixed(2); return new Intl.NumberFormat(numberLocale, { notation: Math.abs(value) >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value); }
 function formatCollectedAt(value: string | null, locale: DashboardLocale) { if (!value) return '—'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value.slice(0, 16).replace('T', ' '); return new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(date); }
-function formatBytes(value: number, numberLocale: string) { const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']; let amount = Math.max(0, value); let unit = 0; while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit += 1; } return `${new Intl.NumberFormat(numberLocale, { maximumFractionDigits: amount < 10 && unit ? 2 : 1 }).format(amount)} ${units[unit]}`; }
-function formatDuration(value: number, locale: DashboardLocale) { const seconds = Math.max(0, value) / 1000; return seconds < 60 ? `${seconds.toFixed(seconds < 10 ? 1 : 0)}${locale === 'zh' ? ' 秒' : ' s'}` : `${(seconds / 60).toFixed(seconds < 600 ? 1 : 0)}${locale === 'zh' ? ' 分钟' : ' min'}`; }

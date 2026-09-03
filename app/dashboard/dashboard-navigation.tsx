@@ -18,11 +18,11 @@ const groups: NavGroup[] = [
     { href: '/dashboard/products', en: 'All products', zh: '全部产品', icon: Boxes, exact: true },
     { href: '/dashboard/products/goals', en: 'Goals', zh: '目标', icon: Target, exact: true },
   ] },
-  { en: 'Data', zh: '数据', icon: ChartNoAxesCombined, mobileHref: '/dashboard/data', children: [
+  { en: 'Data', zh: '数据', icon: ChartNoAxesCombined, mobileHref: '/dashboard/views/indie_hacker', children: [
+    { href: '/dashboard/views/indie_hacker', en: 'Data dashboard', zh: '数据大盘', icon: Layers3 },
     { href: '/dashboard/data', en: 'By product', zh: '按产品查看', icon: Gauge },
     { href: '/dashboard/charts', en: 'Charts', zh: '图表', icon: BarChart3 },
     { href: '/dashboard/sources', en: 'Data sources', zh: '数据源', icon: Cable },
-    { href: '/dashboard/views/indie_hacker', en: 'Data dashboard', zh: '数据大盘', icon: Layers3 },
   ] },
   { en: 'AI reports', zh: 'AI 报告', icon: Bot, mobileHref: '/dashboard/agent', children: [
     { href: '/dashboard/agent', en: 'Create report', zh: '生成报告', icon: Bot },
