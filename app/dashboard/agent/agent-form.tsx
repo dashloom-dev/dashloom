@@ -31,7 +31,7 @@ const agents = [
 const starterQuestions: Record<string, string[]> = {
   portfolio_analyst: ['Which product is furthest from its operating goal?', 'What changed across my portfolio this week?', 'Where should I invest the next day of work?'],
   revenue_analyst: ['Which revenue goal is at risk, and why?', 'Which retention or refund risk needs action?', 'What commercial experiment should I run next?'],
-  seo_growth_analyst: ['Which SEO goal is furthest off track?', 'Where is visibility not turning into clicks?', 'How do our search trends compare with competitors?'],
+  seo_growth_analyst: ['Find queries ranking 4–20 worth improving, with evidence and next actions.', 'Which high-impression pages get few clicks? Propose a measurable experiment.', 'Which queries lost clicks? Separate visibility, CTR, and ranking changes.'],
   operations_analyst: ['What operational regression should I investigate first?', 'Which product has the weakest health evidence?', 'What changed after recent deployments?'],
   client_reporting_analyst: ['Prepare a client-safe win, risk, and next action.', 'What should the client understand this week?', 'Turn the latest evidence into an executive update.'],
 };
@@ -155,7 +155,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
   function onQuestionKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); }
   }
-  const suggestions = starterQuestions[preset] || starterQuestions.portfolio_analyst;
+  const suggestions = zh && preset === 'seo_growth_analyst' ? ['找出排名 4–20、值得优化的查询词，列出证据和下一步。', '哪些页面曝光高但点击少？给出可验证的优化实验。', '哪些查询词点击下滑？分别分析曝光、点击率和排名变化。'] : starterQuestions[preset] || starterQuestions.portfolio_analyst;
   const startsNewConversation = Boolean(conversationId) && (preset !== defaultPreset || productId !== (defaultProductId || ''));
   const evidenceReady = conversationId && !startsNewConversation ? lockedReady : isAgentScopeReady(readinessByScope, productId, preset);
   const formReady = available && (evidenceReady || attachments.length > 0);
