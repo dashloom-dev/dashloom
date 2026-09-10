@@ -21,6 +21,7 @@ function localizedTrace(step: AgentExecutionTraceStep, zh: boolean) {
   if (!zh) return step;
   const count = numberFromDetail(step.detail);
   const labels: Record<string, string> = {
+    investigating: step.status === 'completed' ? '证据调查完成' : '正在补查证据',
     preparing: step.status === 'completed' ? '运行准备完成' : '准备分析',
     images_validated: '图片已校验',
     evidence_frozen: step.status === 'completed' ? '证据已冻结' : '正在冻结证据',
@@ -30,6 +31,7 @@ function localizedTrace(step: AgentExecutionTraceStep, zh: boolean) {
     completed: '运行已完成',
   };
   const details: Record<string, string> = {
+    investigating: step.status === 'completed' ? `${count || '0'} 次只读补查已完成，调查记录与新增证据已保存。` : '正在判断是否需要补查当前产品的页面或查询词数据，最多执行两轮。',
     preparing: step.status === 'completed' ? '所选专家、分析范围和模型服务商已通过就绪检查。' : '正在检查所选专家、分析范围、模型服务商和用量规则。',
     images_validated: `${count || '所附'} 张图片已通过类型、大小和文件签名校验，并发送给当前配置的模型。`,
     evidence_frozen: step.status === 'completed' ? `${count || '本次'} 条受限证据记录已锁定到本次运行。` : '正在收集本次运行可使用的当前证据和对话上下文。',
