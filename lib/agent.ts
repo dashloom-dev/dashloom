@@ -1,3 +1,4 @@
+import { answerLanguage, balancedEvidence, coverageDisclosure, loadProductEvidence, observedChange, productCoverage, validateAnswerLanguage, validatePortfolioCoverage } from './agent-answer-policy';
 import { breakdownMetricPredicate, investigate, type InvestigationRequest, type InvestigationTrace } from './agent-investigation';
 import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -104,9 +105,10 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
   const metricPolicy = allowed.length ? domains.length ? or(inArray(metricPoints.metric, queryableMetrics), and(eq(metricPoints.source, 'custom'), inArray(jsonText(metricPoints.dimensionsJson, 'domain'), domains))) : inArray(metricPoints.metric, queryableMetrics) : undefined;
   const competitorPolicy = allowed.length ? domains.length ? or(inArray(competitorMetricPoints.metric, queryableMetrics), and(eq(competitorMetricPoints.source, 'custom'), inArray(jsonText(competitorMetricPoints.dimensionsJson, 'domain'), domains))) : inArray(competitorMetricPoints.metric, queryableMetrics) : undefined;
   const metricScope = and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, start), lte(metricPoints.metricDate, currentEnd), metricPolicy);
-  const aggregateMetricRows = focus ? [] : await getDb().select().from(metricPoints).where(and(metricScope, sql<boolean>`substr(${metricPoints.metric}, 1, 6) <> 'query_' and substr(${metricPoints.metric}, 1, 5) <> 'page_'`)).orderBy(desc(metricPoints.metricDate)).limit(aggregateMetricLimit + 1);
-  const breakdownMetricRows = await getDb().select().from(metricPoints).where(and(metricScope, breakdownMetricPredicate(metricPoints.metric), focus ? (focus.label ? eq(jsonText(metricPoints.dimensionsJson, focus.dimension), focus.label) : sql<boolean>`${jsonText(metricPoints.dimensionsJson, focus.dimension)} is not null`) : undefined)).orderBy(desc(metricPoints.metricDate)).limit(breakdownMetricLimit + 1);
-  const rows = [...aggregateMetricRows.slice(0, aggregateMetricLimit), ...breakdownMetricRows.slice(0, breakdownMetricLimit)];
+  const productIds = productRows.map((product) => product.id);
+  const aggregateLoad = focus ? { rows: [] as Array<typeof metricPoints.$inferSelect>, omittedProducts: [] as string[] } : await loadProductEvidence(productIds, aggregateMetricLimit, (id, limit) => getDb().select().from(metricPoints).where(and(metricScope, eq(metricPoints.productId, id), sql<boolean>`substr(${metricPoints.metric}, 1, 6) <> 'query_' and substr(${metricPoints.metric}, 1, 5) <> 'page_'`)).orderBy(desc(metricPoints.metricDate), metricPoints.id).limit(limit));
+  const breakdownLoad = await loadProductEvidence(productIds, breakdownMetricLimit, (id, limit) => getDb().select().from(metricPoints).where(and(metricScope, eq(metricPoints.productId, id), breakdownMetricPredicate(metricPoints.metric), focus ? (focus.label ? eq(jsonText(metricPoints.dimensionsJson, focus.dimension), focus.label) : sql<boolean>`${jsonText(metricPoints.dimensionsJson, focus.dimension)} is not null`) : undefined)).orderBy(desc(metricPoints.metricDate), metricPoints.id).limit(limit));
+  const rows = [...aggregateLoad.rows, ...breakdownLoad.rows];
   const allGoalDefinitions = focus ? [] : await getDb().select().from(productGoals).where(and(eq(productGoals.workspaceId, workspaceId), scope.productId ? eq(productGoals.productId, scope.productId) : undefined, eq(productGoals.enabled, true)));
   const goalMetricRows = allGoalDefinitions.length ? await getDb().select({ productId: metricPoints.productId, source: metricPoints.source, metric: metricPoints.metric, metricDate: metricPoints.metricDate, value: metricPoints.value, dimensionsJson: metricPoints.dimensionsJson }).from(metricPoints).where(and(eq(metricPoints.workspaceId, workspaceId), scope.productId ? eq(metricPoints.productId, scope.productId) : undefined, gte(metricPoints.metricDate, day(window.currentEndOffset - 89)), lte(metricPoints.metricDate, currentEnd), inArray(metricPoints.metric, [...new Set(allGoalDefinitions.map((goal) => goal.metric))]))).orderBy(desc(metricPoints.metricDate)).limit(20000) : [];
   const goalDefinitions = allGoalDefinitions.filter((goal) => agentMetricAllowed(preset, allowed, goal.metric, null) || goalMetricRows.some((point) => point.productId === goal.productId && point.metric === goal.metric && (!goal.source || point.source === goal.source) && agentMetricAllowed(preset, allowed, point.metric, customMetricDomain(point.source, point.dimensionsJson))));
@@ -125,7 +127,7 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
   }
   const allSeries = [...aggregates.values()].map((item) => {
     const current = finishRollup(item.metric, item.currentRollup); const previous = finishRollup(item.metric, item.previousRollup);
-    return { productId: item.productId, productName: item.productName, source: item.source, metric: item.metric, currency: item.currency, domain: item.domain, categoryHint: item.domain, dimension: item.dimension, current, previous, currentSamples: item.currentRollup.count, previousSamples: item.previousRollup.count, latestDate: item.latestDate, evidenceId: `metric:${item.productId}:${item.source}:${item.metric}${item.currency ? `:${item.currency}` : ''}${item.dimension ? `:${item.dimension.type}:${evidenceLabelHash(item.dimension.label)}` : ''}`, changePercent: previous === 0 ? null : ((current - previous) / Math.abs(previous)) * 100 };
+    return { productId: item.productId, productName: item.productName, source: item.source, metric: item.metric, currency: item.currency, domain: item.domain, categoryHint: item.domain, dimension: item.dimension, current, previous, currentSamples: item.currentRollup.count, previousSamples: item.previousRollup.count, latestDate: item.latestDate, evidenceId: `metric:${item.productId}:${item.source}:${item.metric}${item.currency ? `:${item.currency}` : ''}${item.dimension ? `:${item.dimension.type}:${evidenceLabelHash(item.dimension.label)}` : ''}`, changePercent: observedChange(current, previous, item.currentRollup.count, item.previousRollup.count) };
   });
   const aggregateSeries = allSeries.filter((item) => !item.dimension);
   const dimensionGroups = new Map<string, typeof allSeries>();
@@ -135,21 +137,17 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
     group.push(item); dimensionGroups.set(key, group);
   }
   const dimensionPriority = (items: typeof allSeries) => items.reduce((score, item) => score + Math.abs(item.current - item.previous) + (item.metric.endsWith('_impressions') ? Math.max(item.current, item.previous) * 0.02 : 0), 0);
-  const selectedDimensionGroups = [...dimensionGroups.values()].sort((left, right) => dimensionPriority(right) - dimensionPriority(left)).reduce((selected, group) => {
-    const type = group[0]?.dimension?.type;
-    const limit = type === 'query' ? 20 : 10;
-    if (type && selected.filter((items) => items[0]?.dimension?.type === type).length < limit) selected.push(group);
-    return selected;
-  }, [] as Array<typeof allSeries>);
+  const rankedGroups = [...dimensionGroups.values()].sort((left, right) => dimensionPriority(right) - dimensionPriority(left));
+  const selectedDimensionGroups = ['query', 'page'].flatMap((type) => balancedEvidence(rankedGroups.filter((group) => group[0]?.dimension?.type === type), Math.max(type === 'query' ? 20 : 10, productRows.length), (group) => group[0].productId));
   const series = [...aggregateSeries, ...selectedDimensionGroups.flat()];
   const crossSignals = buildCrossSignals(aggregateSeries);
   const eligibleCompetitorRows = competitorRows.filter(({ point }) => agentMetricAllowed(preset, allowed, point.metric, customMetricDomain(point.source, point.dimensionsJson)));
   const competitorAggregates = new Map<string, { competitorId: string; competitorName: string; productId: string | null; domain: string | null; source: string; metric: string; currency: string | null; currentRollup: RollupAccumulator; previousRollup: RollupAccumulator; latestDate: string }>();
   for (const { point, competitor } of eligibleCompetitorRows) { const currency = metricCurrency(point.dimensionsJson); const key = `${competitor.id}:${point.source}:${point.metric}:${currency || ''}`; const value = competitorAggregates.get(key) || { competitorId: competitor.id, competitorName: competitor.name, productId: competitor.productId, domain: competitor.domain, source: point.source, metric: point.metric, currency, currentRollup: emptyRollup(), previousRollup: emptyRollup(), latestDate: point.metricDate }; addRollupValue(point.metricDate >= split ? value.currentRollup : value.previousRollup, point.metricDate, point.value); if (point.metricDate > value.latestDate) value.latestDate = point.metricDate; competitorAggregates.set(key, value); }
-  const competitorTrends = [...competitorAggregates.values()].map((item) => { const current = finishRollup(item.metric, item.currentRollup); const previous = finishRollup(item.metric, item.previousRollup); return { competitorId: item.competitorId, competitorName: item.competitorName, productId: item.productId, domain: item.domain, source: item.source, metric: item.metric, currency: item.currency, current, previous, changePercent: previous === 0 ? null : ((current - previous) / Math.abs(previous)) * 100, latestDate: item.latestDate, evidenceId: `competitor-trend:${item.competitorId}:${item.source}:${item.metric}${item.currency ? `:${item.currency}` : ''}` }; });
+  const competitorTrends = [...competitorAggregates.values()].map((item) => { const current = finishRollup(item.metric, item.currentRollup); const previous = finishRollup(item.metric, item.previousRollup); return { competitorId: item.competitorId, competitorName: item.competitorName, productId: item.productId, domain: item.domain, source: item.source, metric: item.metric, currency: item.currency, current, previous, changePercent: observedChange(current, previous, item.currentRollup.count, item.previousRollup.count), latestDate: item.latestDate, evidenceId: `competitor-trend:${item.competitorId}:${item.source}:${item.metric}${item.currency ? `:${item.currency}` : ''}` }; });
   const anomalies = series.filter((item) => item.changePercent !== null).sort((a, b) => Math.abs(b.changePercent!) - Math.abs(a.changePercent!)).slice(0, 12).map((item) => ({ evidenceRef: item.evidenceId, direction: item.changePercent! >= 0 ? 'up' : 'down', changePercent: item.changePercent, current: item.current, previous: item.previous }));
   const healthScores = (preset === 'portfolio_analyst' || preset === 'operations_analyst' || preset === 'client_reporting_analyst' ? productRows : []).map((product) => {
-    const productSeries = allSeries.filter((item) => item.productId === product.id); const freshness = productSeries.map((item) => item.latestDate).sort().at(-1) || null;
+    const productSeries = aggregateSeries.filter((item) => item.productId === product.id && item.currentSamples > 0 && item.previousSamples > 0); const freshness = productSeries.map((item) => item.latestDate).sort().at(-1) || null;
     return { productId: product.id, productName: product.name, freshness, ...calculateProductHealth({ productId: product.id, freshness, metrics: productSeries }) };
   });
   const goals = evaluateProductGoals(goalDefinitions.map((goal) => ({ ...goal, productName: names.get(goal.productId)?.name || goal.productId })), goalMetricRows, currentEnd);
@@ -182,6 +180,8 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
     generatedAt: new Date().toISOString(),
     periods: { current: { start: split, end: currentEnd }, previous: { start, end: frozenPeriods?.previous.end || day(window.previousEndOffset) } },
     products: productRows,
+    omittedAggregateProducts: aggregateLoad.omittedProducts,
+    omittedBreakdownProducts: breakdownLoad.omittedProducts,
     series,
     crossSignals,
     seoOpportunities: preset === 'seo_growth_analyst' ? buildSeoOpportunities(series, window.currentEndOffset - window.splitOffset + 1) : null,
@@ -195,11 +195,11 @@ export async function buildEvidence(workspaceId: string, preset: AgentPreset = '
     pointCount: eligibleMetricRows.length + eligibleCompetitorRows.length,
     eligibleSeriesCount: series.length,
     competitorPointCount: eligibleCompetitorRows.length,
-    truncated: { metrics: aggregateMetricRows.length > aggregateMetricLimit || breakdownMetricRows.length > breakdownMetricLimit || rows.some((row) => metricIsTruncated(row.dimensionsJson)), breakdowns: dimensionGroups.size > selectedDimensionGroups.length, competitors: allCompetitorRows.length > competitorLimit },
+    truncated: { metrics: aggregateLoad.omittedProducts.length > 0 || breakdownLoad.omittedProducts.length > 0 || rows.some((row) => metricIsTruncated(row.dimensionsJson)), breakdowns: dimensionGroups.size > selectedDimensionGroups.length, competitors: allCompetitorRows.length > competitorLimit },
   };
 }
 
-export const AGENT_PROMPT_VERSION = '2026-09-10.1';
+export const AGENT_PROMPT_VERSION = '2026-09-20.1';
 export type EvidenceSkill = { id: string; slug: string; name: string; version: string; instructions: string; requiredMetrics: string[]; instructionHash: string; policyVersion: number };
 export type AgentProvider = typeof aiProviderAccounts.$inferSelect;
 
@@ -247,7 +247,7 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
       productIds: evidence.products.map((product) => product.id),
       signal: abortSignal,
       onTrace: (trace) => { evidence.investigation = trace; },
-      context: () => JSON.stringify({ question: question.slice(0, 1000), preset, products: evidence.products, periods: evidence.periods, series: evidence.series.slice(-40), truncated: evidence.truncated }),
+      context: () => JSON.stringify({ question: question.slice(0, 1000), preset, products: evidence.products, periods: evidence.periods, scope: evidence.scope, coverage: productCoverage(evidence.products, evidence.series, evidence.omittedAggregateProducts), series: balancedEvidence(evidence.series.filter((item) => !item.dimension), Math.max(40, evidence.products.length), (item) => item.productId), truncated: evidence.truncated }),
       decide: async (system, prompt, signal) => {
         const response = await invokeOpenAiCompatibleWithFallback({ baseUrl: baseURL, apiKey, model, system, prompt, preferredProfile: investigationCompatibility.profile, allowFallback: false, abortSignal: signal });
         const inputTokens = response.usage.inputTokens || Math.max(1, Math.ceil((system.length + prompt.length) / 4));
@@ -268,8 +268,11 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
   }
   if ((evidence.investigation as InvestigationTrace | undefined)?.steps.some((step) => step.truncated)) evidence.truncated.breakdowns = true;
   await investigation?.onEvidenceUpdated();
-  const system = agentSystemPrompt(preset, evidenceSkills);
-  const prompt = JSON.stringify({ question: question.slice(0, 1000), agent: { preset, name: agentDefinitions[preset].name, promptVersion: AGENT_PROMPT_VERSION }, evidence });
+  const language = answerLanguage(question);
+  const coverage = productCoverage(evidence.products, evidence.series, evidence.omittedAggregateProducts);
+  const responsePolicy = ` Write all user-facing prose in ${language === 'zh' ? 'Simplified Chinese' : 'English'}, including summary, titles, details, actions, reasoning and limitations. Preserve proper names and evidence IDs. For workspace scope, first explain product coverage and compare products using aggregate metrics before drilling into pages or queries. Never present one product as the entire portfolio. Products without comparable evidence must be explicitly identified as unavailable, never unchanged. Confidence is uncalibrated, not a probability of correctness. Do not recommend a specific page for a query unless supplied evidence links them.`;
+  const system = agentSystemPrompt(preset, evidenceSkills) + responsePolicy;
+  const prompt = JSON.stringify({ question: question.slice(0, 1000), agent: { preset, name: agentDefinitions[preset].name, promptVersion: AGENT_PROMPT_VERSION }, responseLanguage: language, productCoverage: coverage, evidence });
   const imageTokenAllowance = images.length * 4096;
   const compatibility = parseProviderCompatibility(provider.compatibilityJson, baseURL);
   let result: { text: string; usage: { inputTokens?: number; outputTokens?: number }; finishReason: string };
@@ -295,7 +298,12 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
       console.warn(JSON.stringify({ event: 'agent_provider_schema_invalid', attempt, providerId: provider.id, providerMode: provider.mode, model, finishReason: candidate.finishReason, textLength: candidate.text.length, issues: parsedOutput.error.issues.slice(0, 8).map((issue) => ({ code: issue.code, path: issue.path.join('.') })) }));
       throw new AgentOutputFormatError('The AI provider returned JSON that did not match the required Agent result structure. Try again.');
     }
-    try { return validateAgentCitations(ensureReadableReasoningSummary(ensureAgentEvidenceDisclosure(parsedOutput.data, evidence)), evidence); }
+    try {
+      validateAnswerLanguage(parsedOutput.data, language);
+      if (evidence.scope.mode === 'workspace' && preset === 'portfolio_analyst') validatePortfolioCoverage(parsedOutput.data, coverage, question);
+      const validated = validateAgentCitations(ensureReadableReasoningSummary(ensureAgentEvidenceDisclosure(parsedOutput.data, evidence)), evidence);
+      return { ...validated, summary: evidence.scope.mode === 'workspace' ? coverageDisclosure(coverage, language) + '\n\n' + validated.summary : validated.summary };
+    }
     catch (error) {
       const message = error instanceof Error ? error.message : '';
       const reason = /unknown product/i.test(message) ? 'unknown_product'
@@ -315,10 +323,13 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
     const repair = buildAgentRepairRequest({
       draft: result.text,
       validationFeedback: initialError.repairFeedback,
-      evidenceIds: [...evidence.series, ...evidence.competitors, ...evidence.competitorTrends, ...evidence.crossSignals, ...evidence.healthScores, ...evidence.goals, ...evidence.missions, ...(evidence.images || [])].map((item) => item.evidenceId),
+      language,
+      context: { question, scope: evidence.scope, coverage, series: balancedEvidence(evidence.series.filter((item) => !item.dimension), Math.max(120, evidence.products.length), (item) => item.productId) },
+      evidenceIds: [...balancedEvidence(evidence.series.filter((item) => !item.dimension), 120, (item) => item.productId), ...evidence.series, ...evidence.competitors, ...evidence.competitorTrends, ...evidence.crossSignals, ...evidence.healthScores, ...evidence.goals, ...evidence.missions, ...(evidence.images || [])].map((item) => item.evidenceId),
       productIds: evidence.products.map((product) => product.id),
       truncated: evidence.truncated,
     });
+    repair.system += responsePolicy;
     investigation?.onTextReset?.();
     let repaired: typeof result;
     try {
