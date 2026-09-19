@@ -4,6 +4,21 @@ type CitationEvidence = { products?: Array<{ id: string }>; series: Array<{ evid
 
 const incompleteCoveragePattern = /(?:\bincomplete\b|\bpartial\b|\btruncated\b|\blimited coverage\b|不完整|部分(?:[^。；，,.]{0,12})?数据|已截断|覆盖(?:范围)?(?:有限|受限)|仅覆盖|只覆盖)/i;
 
+// Derived summaries must keep the claim paired with its original citations.
+// Attaching every finding's refs to a new summary can introduce a relationship
+// citation without the hypothesis disclosure that made the finding valid.
+export function ensureReadableReasoningSummary<T extends { findings: CitationFinding[]; reasoningSummary?: Array<CitationReasoningStep & { detail: string }> }>(result: T) {
+  if (result.reasoningSummary?.length) return { ...result, reasoningSummary: result.reasoningSummary };
+  return {
+    ...result,
+    reasoningSummary: result.findings.slice(0, 2).map((finding) => ({
+      title: finding.title,
+      detail: finding.detail || '',
+      evidenceRefs: [...finding.evidenceRefs],
+    })),
+  };
+}
+
 export function ensureAgentEvidenceDisclosure<T extends { findings: CitationFinding[] }>(result: T, evidence: CitationEvidence): T {
   const truncated = evidence.truncated?.metrics || evidence.truncated?.breakdowns || evidence.truncated?.competitors;
   if (!truncated || incompleteCoveragePattern.test(result.findings.map((finding) => `${finding.title} ${finding.detail || ''}`).join(' ')) || !result.findings.length) return result;

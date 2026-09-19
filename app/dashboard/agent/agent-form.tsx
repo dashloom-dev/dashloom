@@ -1,15 +1,20 @@
 'use client';
 
-import { ClipboardEvent, FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { ClipboardEvent, FormEvent, KeyboardEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import type { AgentResult } from '@/lib/agent';
+import { AgentDashboardButton } from './agent-dashboard-button';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import { AgentScopeReadiness, isAgentScopeReady } from '@/lib/agent-scope';
 import { translateDashboard } from '../dashboard-translations';
-import { agentBeforeNewConversationEvent } from './agent-conversation-pane';
-import { AgentRunTrace, type AgentExecutionTraceStep } from './agent-run-transparency';
+import { agentBeforeNewConversationEvent, agentConversationSavedEvent } from './agent-conversation-pane';
+import { AgentReasoningSummary, AgentRunTrace, type AgentExecutionTraceStep } from './agent-run-transparency';
 import { AGENT_IMAGE_ACCEPT, AGENT_IMAGE_MAX_BYTES, AGENT_IMAGE_MAX_COUNT, AGENT_IMAGE_MAX_TOTAL_BYTES } from '@/lib/agent-images';
 
-import { readableAgentStream } from '@/lib/agent-stream';
+import { agentStreamParagraphs } from '@/lib/agent-stream';
+
+type SavedTurn = { runId: string; question: string; imageCount: number; findings: AgentResult };
 
 type Progress = AgentExecutionTraceStep;
 type ImageAttachment = { id: string; file: File; previewUrl: string };
@@ -39,7 +44,9 @@ const starterQuestions: Record<string, string[]> = {
 };
 
 export function AgentForm({ available, readinessByScope, lockedReady = false, defaultPreset = 'portfolio_analyst', conversationId, products, defaultProductId = null, lockedScopeLabel, zh = false }: { available: boolean; readinessByScope: AgentScopeReadiness; lockedReady?: boolean; defaultPreset?: string; conversationId?: string; products: Array<{ id: string; name: string }>; defaultProductId?: string | null; lockedScopeLabel?: string; zh?: boolean }) {
-  const router = useRouter();
+  const [context, setContext] = useState({ id: conversationId, preset: defaultPreset, productId: defaultProductId || '' });
+  const [savedTurns, setSavedTurns] = useState<SavedTurn[]>([]);
+  const [completedTurn, setCompletedTurn] = useState<SavedTurn | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
   const [question, setQuestion] = useState('');
@@ -47,10 +54,27 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
   const [productId, setProductId] = useState(defaultProductId || '');
   const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [submittedImageCount, setSubmittedImageCount] = useState(0);
-  const [answer, setAnswer] = useState('');
   const [progress, setProgress] = useState<Progress[]>([]);
+  const [answer, setAnswer] = useState('');
+  const [failed, setFailed] = useState(false);
+  const [repairing, setRepairing] = useState(false);
+  const [liveHost, setLiveHost] = useState<HTMLElement | null>(null);
+  const followOutput = useRef(true);
+  const bindComposer = useCallback((form: HTMLFormElement | null) => {
+    setLiveHost(form?.closest('.agent-chat')?.querySelector<HTMLElement>('.agent-chat-scroll') || null);
+  }, []);
+  useEffect(() => {
+    if (!liveHost) return;
+    const onScroll = () => { followOutput.current = liveHost.scrollHeight - liveHost.clientHeight - liveHost.scrollTop < 80; };
+    liveHost.addEventListener('scroll', onScroll, { passive: true });
+    return () => liveHost.removeEventListener('scroll', onScroll);
+  }, [liveHost]);
+  useLayoutEffect(() => {
+    if (liveHost && followOutput.current) liveHost.scrollTo({ top: liveHost.scrollHeight, behavior: 'instant' });
+  }, [liveHost, answer, progress, pending]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentsRef = useRef<ImageAttachment[]>([]);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
@@ -88,12 +112,18 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (abortRef.current) return;
     setPending(true);
+    setFailed(false);
+    setRepairing(false);
+    followOutput.current = true;
     setMessage(zh ? '正在准备分析…' : 'Preparing analysis…');
     const form = new FormData(event.currentTarget);
     const submittedQuestion = String(form.get('question') || '');
     const selectedPreset = String(form.get('preset') || 'portfolio_analyst');
-    const startsNewConversation = Boolean(conversationId) && (selectedPreset !== defaultPreset || productId !== (defaultProductId || ''));
+    const startsNewConversation = Boolean(context.id) && (selectedPreset !== context.preset || productId !== context.productId);
+    if (completedTurn) setSavedTurns((turns) => [...turns, completedTurn]);
+    setCompletedTurn(null);
     setSubmittedQuestion(submittedQuestion);
     setSubmittedImageCount(attachments.length);
     setProgress([]);
@@ -107,7 +137,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       requestBody.set('preset', selectedPreset);
       requestBody.set('productId', productId);
       requestBody.set('stream', 'true');
-      if (conversationId && !startsNewConversation) requestBody.set('conversationId', conversationId);
+      if (context.id && !startsNewConversation) requestBody.set('conversationId', context.id);
       attachments.forEach((attachment) => requestBody.append('images', attachment.file));
       const response = await fetch('/api/agent/analyze', { method: 'POST', signal: controller.signal, body: requestBody });
       if (!response.ok || !response.body) {
@@ -125,17 +155,25 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       const decoder = new TextDecoder();
       let buffer = '';
       let completed = false;
-      let nextConversationId = startsNewConversation ? undefined : conversationId;
-      while (true) {
+      let currentAnswer = '';
+      let nextConversationId = startsNewConversation ? undefined : context.id;
+      let finalTurn: SavedTurn | null = null;
+      try { while (true) {
         const { value, done } = await reader.read();
         buffer += decoder.decode(value, { stream: !done });
         const lines = buffer.split('\n'); buffer = lines.pop() || '';
+        if (done && buffer.trim()) { lines.push(buffer); buffer = ''; }
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line) as { type: string; progress?: Progress; error?: string; conversationId?: string; text?: string };
-          if (event.type === 'text_delta' && event.text) setAnswer((current) => current + event.text);
-          if (event.type === 'text_reset') setAnswer('');
-          if (event.type === 'complete') completed = true;
+          const event = JSON.parse(line) as { type: string; progress?: Progress; error?: string; conversationId?: string; text?: string; runId?: string; findings?: AgentResult };
+          if (event.type === 'text_delta' && event.text) { currentAnswer += event.text; setAnswer(currentAnswer); }
+          if (event.type === 'text_reset') { currentAnswer = ''; setRepairing(true); }
+          if (event.type === 'complete' && event.runId && event.findings) {
+            completed = true;
+            finalTurn = { runId: event.runId, question: submittedQuestion, imageCount: attachments.length, findings: event.findings };
+            setCompletedTurn(finalTurn);
+            setRepairing(false);
+          }
           if (event.type === 'progress' && event.progress) {
             setProgress((current) => {
               const index = current.findIndex((item) => item.stage === event.progress!.stage);
@@ -146,21 +184,27 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
           if (event.conversationId) nextConversationId = event.conversationId;
           if (event.type === 'error') throw new Error(event.error || 'Analysis failed');
         }
-        if (done) break;
-      }
-      if (!completed) throw new Error(zh ? '连接已中断，回答尚未完成。' : 'Connection interrupted before the answer completed.');
+        if (done || completed) break;
+      } } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+      if (!completed || !finalTurn) throw new Error(zh ? '连接已中断，回答尚未完成。' : 'Connection interrupted before the answer completed.');
       setMessage(zh ? '分析已完成，并连同证据快照保存。' : 'Analysis completed and stored with its evidence snapshot.');
       setQuestion('');
       attachments.forEach((attachment) => URL.revokeObjectURL(attachment.previewUrl));
       setAttachments([]);
-      if (nextConversationId && nextConversationId !== conversationId) {
-        router.push(`/dashboard/agent?conversation=${nextConversationId}`);
-      } else {
-        router.refresh();
+      if (nextConversationId) {
+        setContext({ id: nextConversationId, preset: selectedPreset, productId });
+        const url = new URL(window.location.href);
+        url.searchParams.set('conversation', nextConversationId);
+        window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+        window.dispatchEvent(new CustomEvent(agentConversationSavedEvent, { detail: {
+          id: nextConversationId, title: submittedQuestion.replace(/\s+/g, ' ').slice(0, 80),
+          agentPreset: selectedPreset, lastMessageAt: new Date().toISOString(),
+          scopeLabel: products.find((product) => product.id === productId)?.name || (zh ? '全部产品' : 'All products'),
+        } }));
       }
-      setAnswer('');
     } catch (error) {
       const failureMessage = error instanceof DOMException && error.name === 'AbortError' ? (zh ? '本次分析已停止。' : 'Analysis stopped.') : displayError(error, zh);
+      setFailed(true);
       setMessage(failureMessage);
       setProgress((current) => {
         const activeIndex = current.findLastIndex((item) => item.status === 'in_progress');
@@ -176,25 +220,50 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); }
   }
   const suggestions = zh && preset === 'seo_growth_analyst' ? ['找出排名 4–20、值得优化的查询词，列出证据和下一步。', '哪些页面曝光高但点击少？给出可验证的优化实验。', '哪些查询词点击下滑？分别分析曝光、点击率和排名变化。'] : starterQuestions[preset] || starterQuestions.portfolio_analyst;
-  const startsNewConversation = Boolean(conversationId) && (preset !== defaultPreset || productId !== (defaultProductId || ''));
-  const evidenceReady = conversationId && !startsNewConversation ? lockedReady : isAgentScopeReady(readinessByScope, productId, preset);
+  const startsNewConversation = Boolean(context.id) && (preset !== context.preset || productId !== context.productId);
+  const evidenceReady = context.id === conversationId && conversationId && !startsNewConversation ? lockedReady : isAgentScopeReady(readinessByScope, productId, preset);
   const formReady = available && (evidenceReady || attachments.length > 0);
   const readinessMessage = available ? 'This product scope needs matching evidence for the selected specialist.' : 'Connect evidence and a validated model to enable analysis.';
-  return <form className="agent-composer" onSubmit={submit}>
-    {(pending || Boolean(answer) || progress.some((item) => item.status === 'failed')) && <section className="agent-live-turn"><p>{submittedQuestion}{submittedImageCount ? <small>{zh ? ` · ${submittedImageCount} 张图片` : ` · ${submittedImageCount} image${submittedImageCount === 1 ? '' : 's'}`}</small> : null}</p><AgentRunTrace trace={progress} zh={zh} live />{answer && <div className="agent-stream-answer" aria-live="polite" aria-busy={pending}><small>{pending ? (zh ? '正在生成，内容待校验…' : 'Generating; validation pending…') : (zh ? '本次生成内容' : 'Generated response')}</small><div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{readableAgentStream(answer)}</div></div>}</section>}
+  const liveTurn = (pending || Boolean(answer) || failed || completedTurn) ? <section className="agent-live-turn" data-pending={pending} data-failed={failed}>
+    <div className="agent-user-turn"><span>{zh ? '你' : 'You'}</span><p>{submittedQuestion}{submittedImageCount ? <small> · {submittedImageCount} {zh ? '张图片' : 'images'}</small> : null}</p></div>
+    <article className="agent-stream-answer">
+      <header className="agent-stream-status" role="status"><span aria-hidden="true" /><strong>{completedTurn ? (zh ? '回答已完成并保存' : 'Answer saved') : failed ? (zh ? '本次回答未完成' : 'Answer incomplete') : repairing ? (zh ? '正在修正证据引用…' : 'Correcting evidence references…') : answer ? (zh ? '正在生成回答…' : 'Writing answer…') : (zh ? '正在分析数据…' : 'Analyzing data…')}</strong></header>
+      {failed && <p className="agent-stream-error" role="alert">{message}{answer ? (zh ? ' 以下为未验证草稿，请勿作为已确认的结论。' : ' The draft below is unverified.') : ''}</p>}
+      <AgentRunTrace trace={completedTurn?.findings.executionTrace || progress} zh={zh} live={pending} />
+      <div className="agent-stream-content" aria-busy={pending}>{completedTurn ? <VerifiedAnswer turn={completedTurn} zh={zh} /> : <>{agentStreamParagraphs(answer).map((part, index) => part.kind === 'title' ? <h3 key={index}>{part.text}</h3> : <p key={index} data-kind={part.kind}>{part.kind === 'action' || part.kind === 'recommendation' ? <b>{zh ? '建议：' : 'Next step: '}</b> : null}{part.text}</p>)}</>}</div>
+    </article>
+  </section> : null;
+  return <>{liveHost && (liveTurn || savedTurns.length) ? createPortal(<>{savedTurns.map((turn) => <section className="agent-turn-pair" key={turn.runId}><div className="agent-user-turn"><span>{zh ? '你' : 'You'}</span><p>{turn.question}</p></div><article className="agent-stream-answer"><AgentRunTrace trace={turn.findings.executionTrace || []} zh={zh} /><div className="agent-stream-content"><VerifiedAnswer turn={turn} zh={zh} /></div></article></section>)}{liveTurn}</>, liveHost) : null}<form ref={bindComposer} className="agent-composer" onSubmit={submit}>
     <div className="agent-composer-toolbar">
       <div className="agent-composer-scope">
         <label>{zh ? '分析专家' : 'Analysis specialist'}<select name="preset" value={preset} onChange={(event) => setPreset(event.target.value)} disabled={pending}>{agents.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <label>{zh ? '产品范围' : 'Product scope'}<select name="productId" value={productId} onChange={(event) => setProductId(event.target.value)} disabled={pending}><option value="">{conversationId && !defaultProductId ? lockedScopeLabel || (zh ? '全部产品' : 'All products') : (zh ? '全部产品' : 'All products')}</option>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</select></label>
       </div>
-      {conversationId && startsNewConversation ? <p className="agent-scope-note">{zh ? '更改范围后将创建新对话，当前历史保持不变。' : 'Changing scope creates a new conversation and keeps this history unchanged.'}</p> : !conversationId ? <p className="agent-scope-note">{zh ? '选择范围后直接提问；开始对话后更改范围会创建新对话。' : 'Choose a scope and ask directly. Changing scope later creates a new conversation.'}</p> : null}
+      {context.id && startsNewConversation ? <p className="agent-scope-note">{zh ? '更改范围后将创建新对话，当前历史保持不变。' : 'Changing scope creates a new conversation and keeps this history unchanged.'}</p> : !context.id ? <p className="agent-scope-note">{zh ? '选择范围后直接提问；开始对话后更改范围会创建新对话。' : 'Choose a scope and ask directly. Changing scope later creates a new conversation.'}</p> : null}
     </div>
-    {!conversationId && <div className="agent-starters" aria-label={zh ? '建议问题' : 'Suggested analysis questions'}>{suggestions.map((item) => <button type="button" key={item} disabled={!formReady || pending} onClick={() => setQuestion(item)}>{item}</button>)}</div>}
+    {!context.id && <div className="agent-starters" aria-label={zh ? '建议问题' : 'Suggested analysis questions'}>{suggestions.map((item) => <button type="button" key={item} disabled={!formReady || pending} onClick={() => setQuestion(item)}>{item}</button>)}</div>}
     <div className="agent-prompt-box">
       <div className="agent-leave-warning">{zh ? '离开页面会中断当前交流' : 'Leaving this page interrupts the current conversation'}</div>
       {attachments.length ? <div className="agent-image-previews">{attachments.map((attachment) => <figure key={attachment.id}><Image src={attachment.previewUrl} alt={zh ? '待分析图片预览' : 'Image to analyze'} width={76} height={58} unoptimized /><button type="button" onClick={() => removeImage(attachment.id)} disabled={pending} aria-label={zh ? '移除图片' : 'Remove image'}>×</button><figcaption>{Math.max(1, Math.ceil(attachment.file.size / 1024))} {imageSizeUnit}</figcaption></figure>)}</div> : null}
-      <textarea name="question" required minLength={3} maxLength={1000} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={onQuestionKeyDown} onPaste={onPaste} disabled={!available || pending} placeholder={conversationId && !startsNewConversation ? (zh ? '继续追问；Enter 发送，Shift + Enter 换行，也可粘贴截图…' : 'Ask a follow-up. Enter to send, Shift + Enter for a new line, or paste a screenshot…') : (zh ? '询问问题，或粘贴截图让 Agent 分析…' : 'Ask a question, or paste a screenshot for the Agent to analyze…')} />
-      <footer><div className="agent-attachment-control"><input ref={fileInputRef} type="file" accept={AGENT_IMAGE_ACCEPT} multiple hidden onChange={(event) => { addImages([...event.target.files || []]); event.target.value = ''; }} /><button type="button" className="agent-attach-button" disabled={!available || pending || attachments.length >= AGENT_IMAGE_MAX_COUNT} onClick={() => fileInputRef.current?.click()}>{zh ? '＋ 添加图片' : '＋ Add images'}</button><small>{attachments.length}/{AGENT_IMAGE_MAX_COUNT}</small></div><small>{message || (formReady ? attachments.length ? (zh ? '原图仅随本次请求发送；历史记录只保存哈希和证据 ID。' : 'Original images are sent only for this request; history stores only hashes and evidence IDs.') : conversationId && !startsNewConversation ? (zh ? '沿用当前范围，并使用最新证据。' : 'Uses the current scope and latest evidence.') : (zh ? '将保存本次证据快照，方便后续审计。' : 'Saves an evidence snapshot for later review.') : readinessMessage)}</small>{pending ? <button type="button" className="app-secondary" onClick={() => abortRef.current?.abort()}>{zh ? '停止' : 'Stop'}</button> : <button className="app-primary" disabled={!formReady}>{conversationId && !startsNewConversation ? (zh ? '发送' : 'Send') : (zh ? '开始新对话' : 'Start new conversation')}</button>}</footer>
+      <textarea name="question" required minLength={3} maxLength={1000} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={onQuestionKeyDown} onPaste={onPaste} disabled={!available || pending} placeholder={context.id && !startsNewConversation ? (zh ? '继续追问；Enter 发送，Shift + Enter 换行，也可粘贴截图…' : 'Ask a follow-up. Enter to send, Shift + Enter for a new line, or paste a screenshot…') : (zh ? '询问问题，或粘贴截图让 Agent 分析…' : 'Ask a question, or paste a screenshot for the Agent to analyze…')} />
+      <footer><div className="agent-attachment-control"><input ref={fileInputRef} type="file" accept={AGENT_IMAGE_ACCEPT} multiple hidden onChange={(event) => { addImages([...event.target.files || []]); event.target.value = ''; }} /><button type="button" className="agent-attach-button" disabled={!available || pending || attachments.length >= AGENT_IMAGE_MAX_COUNT} onClick={() => fileInputRef.current?.click()}>{zh ? '＋ 添加图片' : '＋ Add images'}</button><small>{attachments.length}/{AGENT_IMAGE_MAX_COUNT}</small></div><small>{message || (formReady ? attachments.length ? (zh ? '原图仅随本次请求发送；历史记录只保存哈希和证据 ID。' : 'Original images are sent only for this request; history stores only hashes and evidence IDs.') : context.id && !startsNewConversation ? (zh ? '沿用当前范围，并使用最新证据。' : 'Uses the current scope and latest evidence.') : (zh ? '将保存本次证据快照，方便后续审计。' : 'Saves an evidence snapshot for later review.') : readinessMessage)}</small>{pending ? <button type="button" className="app-secondary" onClick={() => abortRef.current?.abort()}>{zh ? '停止' : 'Stop'}</button> : <button className="app-primary" disabled={!formReady}>{context.id && !startsNewConversation ? (zh ? '发送' : 'Send') : (zh ? '开始新对话' : 'Start new conversation')}</button>}</footer>
     </div>
-  </form>;
+  </form></>;
+}
+
+function VerifiedAnswer({ turn, zh }: { turn: SavedTurn; zh: boolean }) {
+  return <>
+    <p className="analysis-summary">{turn.findings.summary}</p>
+    {turn.findings.findings.map((finding, index) => <section className="finding" key={index} data-severity={finding.severity}>
+      <h3>{finding.title}</h3><p>{finding.detail}</p>
+      {finding.action && <p data-kind="action"><b>{zh ? '建议：' : 'Next step: '}</b>{finding.action}</p>}
+      <small>{zh ? '证据引用' : 'Evidence references'}: {finding.evidenceRefs.length} · {zh ? 'AI 置信度' : 'AI confidence'} {Math.round(finding.confidence * 100)}%</small>
+    </section>)}
+    <AgentReasoningSummary steps={turn.findings.reasoningSummary || []} zh={zh} />
+    <footer className="analysis-result-actions">
+      <Link className="analysis-audit-link" href={'/dashboard/agent/runs/' + turn.runId}>{zh ? '查看本次使用的数据' : 'View data used'} →</Link>
+      <Link className="analysis-audit-link" href="/dashboard/actions">{zh ? '查看建议任务' : 'View suggested tasks'} →</Link>
+      <AgentDashboardButton analysisRunId={turn.runId} />
+    </footer>
+  </>;
 }

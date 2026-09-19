@@ -1,9 +1,11 @@
 export class AgentOutputFormatError extends Error {
   readonly code = 'PROVIDER_OUTPUT_INVALID';
+  readonly repairFeedback?: string;
 
-  constructor(message: string) {
+  constructor(message: string, repairFeedback?: string) {
     super(message);
     this.name = 'AgentOutputFormatError';
+    this.repairFeedback = repairFeedback;
   }
 }
 

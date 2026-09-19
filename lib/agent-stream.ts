@@ -1,8 +1,8 @@
 // Project only user-facing JSON string fields, including the current partial field.
 // Never render raw JSON, identifiers, or provider reasoning channels.
-export function readableAgentStream(source: string): string {
+export function agentStreamParagraphs(source: string): Array<{ kind: string; text: string }> {
   const visible = new Set(['summary', 'overview', 'title', 'detail', 'description', 'action', 'recommendation']);
-  const paragraphs: string[] = [];
+  const paragraphs: Array<{ kind: string; text: string }> = [];
   let key = '';
   for (let index = 0; index < source.length; index++) {
     if (source[index] !== '"') continue;
@@ -19,8 +19,12 @@ export function readableAgentStream(source: string): string {
     try { value = JSON.parse('"' + raw + '"') as string; } catch { continue; }
     const rest = source.slice(index + 1).trimStart();
     if (complete && rest.startsWith(':')) { key = value; continue; }
-    if (visible.has(key) && value) paragraphs.push(value);
+    if (visible.has(key) && value) paragraphs.push({ kind: key, text: value });
     key = '';
   }
-  return paragraphs.join('\n\n');
+  return paragraphs;
+}
+
+export function readableAgentStream(source: string): string {
+  return agentStreamParagraphs(source).map((paragraph) => paragraph.text).join('\n\n');
 }
