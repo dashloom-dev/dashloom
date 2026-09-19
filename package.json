@@ -1,6 +1,6 @@
 {
   "name": "dashloom-community",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
