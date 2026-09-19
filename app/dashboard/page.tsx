@@ -13,6 +13,8 @@ import { getDeploymentLocale } from '@/lib/deployment-locale';
 import { dashboardComparisonWindow } from '@/lib/dashboard-period';
 import { dashboardTemplates, parseDashboardConfiguration } from '@/lib/dashboard-templates';
 import { aggregateDashboardRows, buildDashboardMetricCards, selectDashboardMetrics, dashboardBreakdownMetrics, humanize, formatMetric } from '@/lib/dashboard-summary';
+import { ManualSyncButton } from './manual-sync-button';
+import { manualSyncTargets } from '@/lib/manual-sync';
 
 export default async function DashboardOverview() {
   const { user } = await requireServerSession();
@@ -30,7 +32,7 @@ export default async function DashboardOverview() {
     db.select({ split: sql<string>`date('now', '-6 days')` }).from(workspaces).where(eq(workspaces.id, workspace.id)).limit(1),
     db.select({ id: analysisRuns.id, findingsJson: analysisRuns.findingsJson, createdAt: analysisRuns.createdAt }).from(analysisRuns).where(and(eq(analysisRuns.workspaceId, workspace.id), eq(analysisRuns.status, 'success'))).orderBy(desc(analysisRuns.createdAt)).limit(1),
     db.select().from(agentActions).where(and(eq(agentActions.workspaceId, workspace.id), inArray(agentActions.status, ['suggested', 'planned', 'in_progress']))).orderBy(sql`case ${agentActions.severity} when 'critical' then 1 when 'warning' then 2 when 'opportunity' then 3 else 4 end`, desc(agentActions.lastSeenAt)).limit(3),
-    db.select({ id: productConnectorMappings.id }).from(productConnectorMappings).innerJoin(connectorAccounts, eq(productConnectorMappings.connectorAccountId, connectorAccounts.id)).where(and(eq(productConnectorMappings.workspaceId, workspace.id), eq(productConnectorMappings.enabled, true), eq(connectorAccounts.status, 'connected'))).limit(1),
+    db.selectDistinct({ source: productConnectorMappings.source, provider: connectorAccounts.provider }).from(productConnectorMappings).innerJoin(connectorAccounts, eq(productConnectorMappings.connectorAccountId, connectorAccounts.id)).where(and(eq(productConnectorMappings.workspaceId, workspace.id), eq(productConnectorMappings.enabled, true), eq(connectorAccounts.status, 'connected'), eq(connectorAccounts.workspaceId, workspace.id))),
     db.select({ id: aiProviderAccounts.id }).from(aiProviderAccounts).where(and(eq(aiProviderAccounts.workspaceId, workspace.id), eq(aiProviderAccounts.status, 'connected'))).limit(1),
     db.select({ id: agentActions.id }).from(agentActions).where(and(eq(agentActions.workspaceId, workspace.id), inArray(agentActions.status, ['planned', 'in_progress', 'done']))).limit(1),
     db.select({ id: reportSchedules.id }).from(reportSchedules).where(and(eq(reportSchedules.workspaceId, workspace.id), eq(reportSchedules.enabled, true))).limit(1),
@@ -56,7 +58,7 @@ export default async function DashboardOverview() {
   const firstValue = buildFirstValueGuide({ productCount: productRows.length, sourceReady: sourceMappings.length > 0, recentEvidenceCount: healthPoints.length, modelReady: connectedProviders.length > 0, successfulAnalysisCount: latestAnalysisRows.length });
 
   return <div className="app-page">
-    <header className="app-page-head"><div><span>{zh ? '工作空间总览' : 'WORKSPACE OVERVIEW'}</span><h1>{zh ? `你好，${user.name.split(' ')[0]}。` : `Good morning, ${user.name.split(' ')[0]}.`}</h1><p>{empty ? (zh ? '添加第一个产品，开始连接真实数据。' : 'Add your first product to begin connecting real data.') : (zh ? `正在监控工作空间中的 ${productRows.length} 个活跃产品。` : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`)}</p></div><LinkButton zh={zh} /></header>
+    <header className="app-page-head"><div><span>{zh ? '工作空间总览' : 'WORKSPACE OVERVIEW'}</span><h1>{zh ? `你好，${user.name.split(' ')[0]}。` : `Good morning, ${user.name.split(' ')[0]}.`}</h1><p>{empty ? (zh ? '添加第一个产品，开始连接真实数据。' : 'Add your first product to begin connecting real data.') : (zh ? `正在监控工作空间中的 ${productRows.length} 个活跃产品。` : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`)}</p></div><div className="overview-header-actions"><ManualSyncButton targets={manualSyncTargets(sourceMappings, workspace.role)} zh={zh} /><LinkButton zh={zh} /></div></header>
     <section className="dashboard-status-strip overview-status-strip">
       <div><Boxes size={17} /><span>{zh ? '活跃产品' : 'Active products'}</span><strong>{productRows.length}</strong></div>
       <div><CalendarDays size={17} /><span>{zh ? '最新数据日' : 'Latest data date'}</span><strong>{overviewDates?.end || '—'}</strong></div>

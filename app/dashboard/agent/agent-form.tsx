@@ -110,7 +110,17 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       if (conversationId && !startsNewConversation) requestBody.set('conversationId', conversationId);
       attachments.forEach((attachment) => requestBody.append('images', attachment.file));
       const response = await fetch('/api/agent/analyze', { method: 'POST', signal: controller.signal, body: requestBody });
-      if (!response.ok || !response.body) throw new Error((await response.json() as { error?: string }).error || 'Analysis failed');
+      if (!response.ok || !response.body) {
+        const failure = await response.json().catch(() => null) as { error?: string; code?: string; field?: string } | null;
+        if (failure?.code === 'INVALID_AGENT_INPUT') {
+          const field = failure.field === 'question' ? (zh ? '问题需为 3–1000 个字符。' : 'Use 3–1000 characters for the question.')
+            : (zh ? '请重新选择分析专家和产品范围，或新建对话后重试。' : 'Select the specialist and product scope again, or start a new conversation.');
+          throw new Error((zh ? '提交的信息无效：' : 'Invalid request: ') + field);
+        }
+        if (response.status === 401) throw new Error(zh ? '登录已过期，请重新登录后重试。' : 'Your session expired. Sign in again.');
+        if (!failure?.error) throw new Error(zh ? '服务器响应异常（HTTP ' + response.status + '），请稍后重试。' : 'Unexpected server response (HTTP ' + response.status + '). Please retry.');
+        throw new Error(failure.error);
+      }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';

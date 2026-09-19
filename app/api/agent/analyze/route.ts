@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
+import { agentAnalyzeInput as input, agentAnalyzeFormInput } from '@/lib/agent-request';
 import { createAuth } from '@/lib/auth';
 import { runWorkspaceAgent } from '@/lib/agent';
 import { getPrimaryWorkspace } from '@/lib/workspaces';
@@ -13,14 +13,6 @@ import { resolveAgentProductScope } from '@/lib/agent-scope';
 import { classifyAgentFailure } from '@/lib/agent-errors';
 import { validateAgentImageFiles } from '@/lib/agent-images';
 
-const input = z.object({
-  question: z.string().trim().min(3).max(1000),
-  preset: z.enum(['portfolio_analyst', 'revenue_analyst', 'seo_growth_analyst', 'operations_analyst', 'client_reporting_analyst']).default('portfolio_analyst'),
-  conversationId: z.preprocess((value) => value === '' ? undefined : value, z.string().uuid().optional()),
-  productId: z.preprocess((value) => value === '' ? null : value, z.string().uuid().nullable().optional()),
-  stream: z.preprocess((value) => value === 'true' ? true : value === 'false' ? false : value, z.boolean().optional()),
-});
-
 export async function POST(request: Request) {
   const authSession = await createAuth().api.getSession({ headers: request.headers });
   if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,7 +25,7 @@ export async function POST(request: Request) {
   try {
     if (multipart) {
       const form = await request.formData();
-      requestInput = { question: form.get('question'), preset: form.get('preset'), conversationId: form.get('conversationId'), productId: form.get('productId'), stream: form.get('stream') };
+      requestInput = agentAnalyzeFormInput(form);
       images = await validateAgentImageFiles(form.getAll('images'));
     } else requestInput = await request.json().catch(() => null);
   } catch (error) {
@@ -41,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: failure.message, code: failure.code }, { status: failure.httpStatus });
   }
   const parsed = input.safeParse(requestInput);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid question' }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid question', code: 'INVALID_AGENT_INPUT', field: parsed.error.issues[0]?.path[0] || null }, { status: 400 });
   try {
     let conversationId = parsed.data.conversationId; let preset = parsed.data.preset;
     let scope = resolveAgentProductScope(parsed.data.productId);
