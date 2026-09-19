@@ -257,7 +257,7 @@ function VerifiedAnswer({ turn, zh }: { turn: SavedTurn; zh: boolean }) {
     {turn.findings.findings.map((finding, index) => <section className="finding" key={index} data-severity={finding.severity}>
       <h3>{finding.title}</h3><p>{finding.detail}</p>
       {finding.action && <p data-kind="action"><b>{zh ? '建议：' : 'Next step: '}</b>{finding.action}</p>}
-      <small>{zh ? '证据引用' : 'Evidence references'}: {finding.evidenceRefs.length} · {zh ? 'AI 置信度' : 'AI confidence'} {Math.round(finding.confidence * 100)}%</small>
+      <small>{zh ? '证据引用' : 'Evidence references'}: {finding.evidenceRefs.length} · {zh ? '建议需结合证据验证' : 'Verify recommendations against the evidence'}</small>
     </section>)}
     <AgentReasoningSummary steps={turn.findings.reasoningSummary || []} zh={zh} />
     <footer className="analysis-result-actions">
