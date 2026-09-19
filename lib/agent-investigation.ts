@@ -3,7 +3,7 @@ import { sql, type SQLWrapper } from 'drizzle-orm';
 import { parseAgentOutputJson } from './agent-output.ts';
 import { OpenAiCompatibleRequestError } from './openai-compatible.ts';
 
-export const INVESTIGATION_LIMITS = { steps: 2, timeoutMs: 35_000, outputTokens: 350, recordsPerStep: 40, promptCharacters: 24_000 } as const;
+export const INVESTIGATION_LIMITS = { steps: 2, recordsPerStep: 40, promptCharacters: 24_000 } as const;
 
 /** Parenthesize OR so surrounding workspace, product and date predicates always apply. */
 export function breakdownMetricPredicate(metric: SQLWrapper) {
@@ -30,24 +30,20 @@ export async function investigate<T extends { evidenceId: string }>(input: {
 }) {
   const trace: InvestigationTrace = { version: 1, steps: [], stopReason: 'step_limit' };
   input.onTrace?.(trace);
-  const timeout = AbortSignal.timeout(INVESTIGATION_LIMITS.timeoutMs);
-  const signal = input.signal ? AbortSignal.any([timeout, input.signal]) : timeout;
+  const signal = input.signal ?? new AbortController().signal;
   const seen = new Set<string>();
   try {
   for (let step = 0; step < INVESTIGATION_LIMITS.steps; step++) {
     input.signal?.throwIfAborted();
-    if (timeout.aborted) { trace.stopReason = 'time_limit'; break; }
     let raw: string;
     try {
       raw = await input.decide(INVESTIGATION_SYSTEM, JSON.stringify({ context: input.context().slice(0, INVESTIGATION_LIMITS.promptCharacters), previousSteps: trace.steps }), signal);
     } catch (error) {
       input.signal?.throwIfAborted();
-      if (timeout.aborted) { trace.stopReason = 'time_limit'; break; }
       if (error instanceof OpenAiCompatibleRequestError && [400, 422].includes(error.statusCode)) { trace.stopReason = 'unsupported_provider'; break; }
       throw error;
     }
     input.signal?.throwIfAborted();
-    if (timeout.aborted) { trace.stopReason = 'time_limit'; break; }
     let decision: z.infer<typeof investigationRequestSchema>;
     try { decision = investigationRequestSchema.parse(parseAgentOutputJson(raw)); }
     catch { trace.stopReason = 'invalid_request'; break; }

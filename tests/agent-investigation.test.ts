@@ -36,13 +36,13 @@ test('unsupported optional planner parameters fall back to the normal analysis',
   assert.equal(trace.steps.length, 0);
 });
 
-test('investigation deadline prevents new queries and preserves a bounded stop reason', async () => {
+test('investigation does not create an automatic deadline', async () => {
   const originalTimeout = AbortSignal.timeout;
   const timer = new AbortController();
-  AbortSignal.timeout = () => timer.signal;
+  AbortSignal.timeout = () => assert.fail('No automatic deadline');
   try {
-    const trace = await investigate({ productIds: ['product-a'], context: () => '', decide: async () => { timer.abort(); return JSON.stringify(request); }, execute: async () => assert.fail('expired investigation cannot read'), accept: () => {} });
-    assert.equal(trace.stopReason, 'time_limit');
+    const trace = await investigate({ productIds: ['product-a'], context: () => '', decide: async () => { timer.abort(); return '{"action":"finish"}'; }, execute: async () => assert.fail('Finished investigation cannot read'), accept: () => {} });
+    assert.equal(trace.stopReason, 'finished');
   } finally { AbortSignal.timeout = originalTimeout; }
 });
 
@@ -102,16 +102,16 @@ test('provider failure propagates while already collected trace remains availabl
   assert.equal(snapshot?.steps.length, 1);
 });
 
-test('investigation output cap reaches compatible providers with fallback disabled', async () => {
+test('investigation requests omit an output token cap', async () => {
   const original = globalThis.fetch;
   let calls = 0;
   globalThis.fetch = async (_url, init) => {
     calls++;
-    assert.equal(JSON.parse(String(init?.body)).max_tokens, INVESTIGATION_LIMITS.outputTokens);
+    assert.equal(JSON.parse(String(init?.body)).max_tokens, undefined);
     return new Response(JSON.stringify({ choices: [{ message: { content: '{"action":"finish"}' } }] }));
   };
   try {
-    await invokeOpenAiCompatibleWithFallback({ baseUrl: 'https://example.com/v1', apiKey: 'test', model: 'test', system: 'test', prompt: 'test', preferredProfile: 'standard_json', allowFallback: false, maxOutputTokens: INVESTIGATION_LIMITS.outputTokens });
+    await invokeOpenAiCompatibleWithFallback({ baseUrl: 'https://example.com/v1', apiKey: 'test', model: 'test', system: 'test', prompt: 'test', preferredProfile: 'standard_json', allowFallback: false });
     assert.equal(calls, 1);
   } finally { globalThis.fetch = original; }
 });
