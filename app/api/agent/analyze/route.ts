@@ -56,25 +56,30 @@ export async function POST(request: Request) {
     }
     if (parsed.data.stream) {
       const encoder = new TextEncoder();
+      const cancellation = new AbortController();
+      const signal = AbortSignal.any([request.signal, cancellation.signal]);
       return new Response(new ReadableStream({
         async start(controller) {
           let open = true;
           const send = (event: Record<string, unknown>) => {
-            if (!open || request.signal.aborted) return;
+            if (!open || signal.aborted) return;
             try { controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`)); } catch { open = false; }
           };
+          const heartbeat = setInterval(() => send({ type: 'heartbeat' }), 15_000);
           try {
             send({ type: 'conversation', conversationId });
-            const result = await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope, { abortSignal: request.signal, images, onProgress: (progress) => send({ type: 'progress', progress }) });
+            const result = await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope, { abortSignal: signal, images, onTextDelta: (text) => send({ type: 'text_delta', text }), onTextReset: () => send({ type: 'text_reset' }), onProgress: (progress) => send({ type: 'progress', progress }) });
             send({ type: 'complete', conversationId, runId: result.runId });
           } catch (error) {
             const failure = classifyAgentFailure(error);
             send({ type: 'error', code: failure.code, error: failure.message });
           } finally {
+            clearInterval(heartbeat);
             if (open) { try { controller.close(); } catch { /* client disconnected */ } }
           }
         },
-      }), { headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store' } });
+        cancel() { cancellation.abort(); },
+      }), { headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-cache, no-transform', 'x-accel-buffering': 'no' } });
     }
     return NextResponse.json({ ...(await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope, { images })), conversationId });
   } catch (error) {

@@ -14,5 +14,6 @@ test('Agent route validates multipart images and binds them to the run', async (
   const source = await readFile(new URL('../app/api/agent/analyze/route.ts', import.meta.url), 'utf8');
   assert.match(source, /request\.formData\(\)/);
   assert.match(source, /validateAgentImageFiles\(form\.getAll\('images'\)\)/);
-  assert.match(source, /images, onProgress/);
+  assert.match(source, /images, onTextDelta/);
+  assert.match(source, /onProgress: \(progress\)/);
 });

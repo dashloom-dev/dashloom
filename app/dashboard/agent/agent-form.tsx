@@ -9,6 +9,8 @@ import { agentBeforeNewConversationEvent } from './agent-conversation-pane';
 import { AgentRunTrace, type AgentExecutionTraceStep } from './agent-run-transparency';
 import { AGENT_IMAGE_ACCEPT, AGENT_IMAGE_MAX_BYTES, AGENT_IMAGE_MAX_COUNT, AGENT_IMAGE_MAX_TOTAL_BYTES } from '@/lib/agent-images';
 
+import { readableAgentStream } from '@/lib/agent-stream';
+
 type Progress = AgentExecutionTraceStep;
 type ImageAttachment = { id: string; file: File; previewUrl: string };
 const imageSizeUnit = 'KB';
@@ -45,6 +47,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
   const [productId, setProductId] = useState(defaultProductId || '');
   const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [submittedImageCount, setSubmittedImageCount] = useState(0);
+  const [answer, setAnswer] = useState('');
   const [progress, setProgress] = useState<Progress[]>([]);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -94,6 +97,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
     setSubmittedQuestion(submittedQuestion);
     setSubmittedImageCount(attachments.length);
     setProgress([]);
+    setAnswer('');
     const controller = new AbortController();
     abortRef.current = controller;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -110,6 +114,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let completed = false;
       let nextConversationId = startsNewConversation ? undefined : conversationId;
       while (true) {
         const { value, done } = await reader.read();
@@ -117,7 +122,10 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
         const lines = buffer.split('\n'); buffer = lines.pop() || '';
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line) as { type: string; progress?: Progress; error?: string; conversationId?: string };
+          const event = JSON.parse(line) as { type: string; progress?: Progress; error?: string; conversationId?: string; text?: string };
+          if (event.type === 'text_delta' && event.text) setAnswer((current) => current + event.text);
+          if (event.type === 'text_reset') setAnswer('');
+          if (event.type === 'complete') completed = true;
           if (event.type === 'progress' && event.progress) {
             setProgress((current) => {
               const index = current.findIndex((item) => item.stage === event.progress!.stage);
@@ -130,6 +138,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
         }
         if (done) break;
       }
+      if (!completed) throw new Error(zh ? '连接已中断，回答尚未完成。' : 'Connection interrupted before the answer completed.');
       setMessage(zh ? '分析已完成，并连同证据快照保存。' : 'Analysis completed and stored with its evidence snapshot.');
       setQuestion('');
       attachments.forEach((attachment) => URL.revokeObjectURL(attachment.previewUrl));
@@ -139,6 +148,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
       } else {
         router.refresh();
       }
+      setAnswer('');
     } catch (error) {
       const failureMessage = error instanceof DOMException && error.name === 'AbortError' ? (zh ? '本次分析已停止。' : 'Analysis stopped.') : displayError(error, zh);
       setMessage(failureMessage);
@@ -161,7 +171,7 @@ export function AgentForm({ available, readinessByScope, lockedReady = false, de
   const formReady = available && (evidenceReady || attachments.length > 0);
   const readinessMessage = available ? 'This product scope needs matching evidence for the selected specialist.' : 'Connect evidence and a validated model to enable analysis.';
   return <form className="agent-composer" onSubmit={submit}>
-    {(pending || progress.some((item) => item.status === 'failed')) && <section className="agent-live-turn"><p>{submittedQuestion}{submittedImageCount ? <small>{zh ? ` · ${submittedImageCount} 张图片` : ` · ${submittedImageCount} image${submittedImageCount === 1 ? '' : 's'}`}</small> : null}</p><AgentRunTrace trace={progress} zh={zh} live /></section>}
+    {(pending || Boolean(answer) || progress.some((item) => item.status === 'failed')) && <section className="agent-live-turn"><p>{submittedQuestion}{submittedImageCount ? <small>{zh ? ` · ${submittedImageCount} 张图片` : ` · ${submittedImageCount} image${submittedImageCount === 1 ? '' : 's'}`}</small> : null}</p><AgentRunTrace trace={progress} zh={zh} live />{answer && <div className="agent-stream-answer" aria-live="polite" aria-busy={pending}><small>{pending ? (zh ? '正在生成，内容待校验…' : 'Generating; validation pending…') : (zh ? '本次生成内容' : 'Generated response')}</small><div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{readableAgentStream(answer)}</div></div>}</section>}
     <div className="agent-composer-toolbar">
       <div className="agent-composer-scope">
         <label>{zh ? '分析专家' : 'Analysis specialist'}<select name="preset" value={preset} onChange={(event) => setPreset(event.target.value)} disabled={pending}>{agents.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>

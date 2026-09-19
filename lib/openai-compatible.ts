@@ -69,7 +69,7 @@ function responsesOutputText(payload: JsonRecord) {
     return item ? contentText(item.content) || contentText(item.text) : '';
   }).join('');
 }
-function textFromPayload(payload: JsonRecord) {
+function textFromPayload(payload: JsonRecord, includeReasoning = true) {
   const choice = Array.isArray(payload.choices) ? record(payload.choices[0]) : null;
   const message = choice ? record(choice.message) : null;
   const delta = choice ? record(choice.delta) : null;
@@ -83,10 +83,9 @@ function textFromPayload(payload: JsonRecord) {
     || contentText(payload.output_text)
     || responsesOutputText(payload)
     || contentText(payload.text)
-    || contentText(message?.reasoning_content)
-    || contentText(delta?.reasoning_content);
+    || (includeReasoning ? contentText(message?.reasoning_content) || contentText(delta?.reasoning_content) : '');
 }
-function textFromRoot(payload: JsonRecord) { for (const variant of payloadVariants(payload)) { const text = textFromPayload(variant); if (text) return text; } return ''; }
+function textFromRoot(payload: JsonRecord, includeReasoning = true) { for (const variant of payloadVariants(payload)) { const text = textFromPayload(variant, includeReasoning); if (text) return text; } return ''; }
 function finishReasonFromPayload(payload: JsonRecord) { const choice = Array.isArray(payload.choices) ? record(payload.choices[0]) : null; const candidate = Array.isArray(payload.candidates) ? record(payload.candidates[0]) : null; const value = choice?.finish_reason ?? candidate?.finishReason; return typeof value === 'string' ? value : 'unknown'; }
 function usageFromPayload(payload: JsonRecord) { const usage = record(payload.usage); const metadata = record(payload.usageMetadata); return { inputTokens: number(usage?.prompt_tokens) ?? number(metadata?.promptTokenCount), outputTokens: number(usage?.completion_tokens) ?? number(metadata?.candidatesTokenCount) }; }
 function parseSse(text: string) {
@@ -123,7 +122,7 @@ export function parseCompatibleResponseBody(body: string, contentType = 'applica
   const variants = payloads.flatMap(payloadVariants);
   const providerError = variants.map((payload) => record(payload.error)).find(Boolean);
   if (providerError) { const status = number(providerError.status) ?? number(providerError.statusCode) ?? number(providerError.code) ?? 502; throw new OpenAiCompatibleRequestError(status, safeProviderCode(providerError.code)); }
-  const text = payloads.map(textFromRoot).join('');
+  const text = payloads.map((payload) => textFromRoot(payload)).join('');
   if (!text.trim()) throw new OpenAiCompatibleOutputError(responseShape(body, contentType, payloads));
   const last = variants[variants.length - 1] || {}; const usagePayload = [...variants].reverse().find((payload) => payload.usage || payload.usageMetadata) || last; const finishPayload = [...variants].reverse().find((payload) => finishReasonFromPayload(payload) !== 'unknown') || last;
   return { text, usage: usageFromPayload(usagePayload), finishReason: finishReasonFromPayload(finishPayload) };
@@ -133,27 +132,73 @@ function profileProperties(profile: CompatibilityProfile) { return { includeMode
 export function inferredCompatibility(baseUrl: string): ProviderCompatibility { const url = new URL(baseUrl); const modelEndpoint = url.hostname === 'api.kie.ai'; return { version: 1, profile: modelEndpoint ? 'model_endpoint_stream' : 'standard_stream', validatedAt: '' }; }
 export function parseProviderCompatibility(value: string | null | undefined, baseUrl: string): ProviderCompatibility { try { const parsed = JSON.parse(value || '{}') as Partial<ProviderCompatibility>; if (parsed.version === 1 && compatibilityProfiles.includes(parsed.profile as CompatibilityProfile)) return { version: 1, profile: parsed.profile as CompatibilityProfile, validatedAt: typeof parsed.validatedAt === 'string' ? parsed.validatedAt : '' }; } catch { /* Existing records are inferred until revalidated. */ } return inferredCompatibility(baseUrl); }
 
-export async function invokeOpenAiCompatible(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; profile: CompatibilityProfile; abortSignal?: AbortSignal; maxOutputTokens?: number; timeoutMs?: number }) {
-  const { includeModel, stream } = profileProperties(input.profile); const signals = [AbortSignal.timeout(input.timeoutMs ?? 60_000), input.abortSignal].filter((signal): signal is AbortSignal => Boolean(signal));
+export async function invokeOpenAiCompatible(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; profile: CompatibilityProfile; abortSignal?: AbortSignal; maxOutputTokens?: number; timeoutMs?: number; onTextDelta?: (text: string) => void }) {
+  const { includeModel, stream } = profileProperties(input.profile); const signals = [input.timeoutMs === undefined ? undefined : AbortSignal.timeout(input.timeoutMs), input.abortSignal].filter((signal): signal is AbortSignal => Boolean(signal));
   const userContent = input.images?.length ? [{ type: 'text', text: input.prompt }, ...input.images.map((image) => ({ type: 'image_url', image_url: { url: image.dataUrl, detail: 'high' } }))] : input.prompt;
   const body: Record<string, unknown> = { messages: [{ role: 'system', content: input.system }, { role: 'user', content: userContent }], stream }; if (includeModel) body.model = input.model; if (includeModel && input.maxOutputTokens) body.max_tokens = input.maxOutputTokens;
   const response = await fetch(`${input.baseUrl.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { authorization: `Bearer ${input.apiKey}`, accept: stream ? 'text/event-stream, application/json' : 'application/json', 'content-type': 'application/json' }, body: JSON.stringify(body), redirect: 'manual', signal: signals.length === 1 ? signals[0] : AbortSignal.any(signals) });
   if (response.status >= 300 && response.status < 400) throw new OpenAiCompatibleRequestError(response.status);
+  if (response.ok && response.body && response.headers.get('content-type')?.includes('text/event-stream')) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = ''; let text = ''; let finishReason = 'unknown';
+    const usage: CompatibleAiResult['usage'] = {};
+    const consume = (event: string) => {
+      for (const payload of parseSse(event)) {
+        const variants = payloadVariants(payload);
+        const error = variants.map((item) => record(item.error)).find(Boolean);
+        if (error) throw new OpenAiCompatibleRequestError(number(error.status) ?? number(error.code) ?? 502, safeProviderCode(error.code));
+        const delta = textFromRoot(payload, false);
+        if (delta) { text += delta; input.onTextDelta?.(delta); }
+        for (const item of variants) {
+          const next = usageFromPayload(item);
+          if (next.inputTokens !== undefined) usage.inputTokens = next.inputTokens;
+          if (next.outputTokens !== undefined) usage.outputTokens = next.outputTokens;
+          const reason = finishReasonFromPayload(item);
+          if (reason !== 'unknown') finishReason = reason;
+        }
+      }
+    };
+    try {
+      while (true) {
+        input.abortSignal?.throwIfAborted();
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        let boundary: RegExpExecArray | null;
+        while ((boundary = /\r?\n\r?\n/.exec(buffer))) {
+          consume(buffer.slice(0, boundary.index));
+          buffer = buffer.slice(boundary.index + boundary[0].length);
+        }
+        if (done) { if (buffer.trim()) consume(buffer); break; }
+      }
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+    if (!text.trim()) throw new OpenAiCompatibleOutputError(responseShape('', 'text/event-stream', []));
+    return { text, usage, finishReason };
+  }
   const responseBody = await response.text();
   if (!response.ok) { try { parseCompatibleResponseBody(responseBody, response.headers.get('content-type') || ''); } catch (error) { if (error instanceof OpenAiCompatibleRequestError) throw new OpenAiCompatibleRequestError(response.status, error.providerCode); } throw new OpenAiCompatibleRequestError(response.status); }
-  return parseCompatibleResponseBody(responseBody, response.headers.get('content-type') || '');
+  const result = parseCompatibleResponseBody(responseBody, response.headers.get('content-type') || '');
+  input.onTextDelta?.(result.text);
+  return result;
 }
 
 export function compatibleProfileCandidates(mode: CompatibilityMode, baseUrl: string): CompatibilityProfile[] { const inferred = inferredCompatibility(baseUrl).profile.startsWith('model_endpoint'); const standard: CompatibilityProfile[] = ['standard_stream', 'standard_json']; const endpoint: CompatibilityProfile[] = ['model_endpoint_stream', 'model_endpoint_json']; if (mode === 'standard_openai') return standard; if (mode === 'model_endpoint') return endpoint; return inferred ? [...endpoint, ...standard] : [...standard, ...endpoint]; }
 function shouldStopProbe(error: unknown) { return error instanceof OpenAiCompatibleRequestError && ([401, 403, 429].includes(error.statusCode) || error.statusCode >= 500); }
 export async function detectOpenAiCompatibility(input: { baseUrl: string; apiKey: string; model: string; mode: CompatibilityMode; abortSignal?: AbortSignal }) { let lastError: unknown = new Error('No compatible request profile was accepted.'); for (const profile of compatibleProfileCandidates(input.mode, input.baseUrl)) { try { await invokeOpenAiCompatible({ ...input, profile, system: 'Return only OK.', prompt: 'Reply with OK.', timeoutMs: 12_000 }); return { version: 1, profile, validatedAt: new Date().toISOString() } satisfies ProviderCompatibility; } catch (error) { lastError = error; if (shouldStopProbe(error)) throw error; } } throw lastError; }
 
-export async function invokeOpenAiCompatibleWithFallback(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; preferredProfile: CompatibilityProfile; allowFallback: boolean; maxOutputTokens?: number; abortSignal?: AbortSignal }) {
+export async function invokeOpenAiCompatibleWithFallback(input: { baseUrl: string; apiKey: string; model: string; system: string; prompt: string; images?: AgentImageInput[]; preferredProfile: CompatibilityProfile; allowFallback: boolean; maxOutputTokens?: number; abortSignal?: AbortSignal; onTextDelta?: (text: string) => void }) {
   const candidates = input.allowFallback ? [input.preferredProfile, ...compatibleProfileCandidates('auto', input.baseUrl).filter((profile) => profile !== input.preferredProfile)] : [input.preferredProfile];
+  if (input.onTextDelta && input.preferredProfile.endsWith('_json')) {
+    const streamingProfile = input.preferredProfile.replace('_json', '_stream') as CompatibilityProfile;
+    const index = candidates.indexOf(streamingProfile);
+    if (index >= 0) candidates.splice(index, 1);
+    candidates.unshift(streamingProfile);
+  }
   let lastError: unknown = new Error('No compatible request profile was accepted.');
+  let emitted = false;
   for (const profile of candidates) {
-    try { return { ...(await invokeOpenAiCompatible({ ...input, profile })), profile }; }
-    catch (error) { lastError = error; if (error instanceof Error && error.name === 'AbortError') throw error; if (shouldStopProbe(error)) throw error; }
+    try { return { ...(await invokeOpenAiCompatible({ ...input, profile, onTextDelta: (text) => { emitted = true; input.onTextDelta?.(text); } })), profile }; }
+    catch (error) { lastError = error; if (emitted) throw error; if (error instanceof Error && error.name === 'AbortError') throw error; if (shouldStopProbe(error)) throw error; }
   }
   throw lastError;
 }
