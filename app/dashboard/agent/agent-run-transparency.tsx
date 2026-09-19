@@ -47,7 +47,7 @@ export function AgentRunTrace({ trace, zh, duration, live = false }: { trace: Ag
   const visible = trace.length ? trace : live
     ? [{ stage: 'waiting', label: zh ? '等待服务器事件' : 'Waiting for server event', detail: zh ? '连接已经建立，正在等待第一条真实执行事件。' : 'The connection is open and waiting for the first real execution event.', status: 'in_progress' as const, startedAt: new Date(0).toISOString(), completedAt: null }]
     : [{ stage: 'legacy', label: zh ? '旧版运行' : 'Legacy run', detail: zh ? '该回答完成于执行轨迹功能上线前，因此没有保存逐步事件。' : 'This answer predates execution-trace recording, so step-level events are unavailable.', status: 'completed' as const, startedAt: new Date(0).toISOString(), completedAt: new Date(0).toISOString() }];
-  return <details className={live ? 'agent-run-trace agent-run-trace-live' : 'agent-run-trace'} open={live}>
+  return <details className={live ? 'agent-run-trace agent-run-trace-live' : 'agent-run-trace'}>
     <summary>{zh ? '真实执行轨迹' : 'Verified execution trace'}{duration ? ` · ${duration}` : ''}</summary>
     <div className="agent-trace-list">{visible.map((raw) => {
       const step = localizedTrace(raw, zh);
@@ -61,8 +61,8 @@ export function AgentRunTrace({ trace, zh, duration, live = false }: { trace: Ag
 
 export function AgentReasoningSummary({ steps, zh }: { steps: AgentReasoningSummaryStep[]; zh: boolean }) {
   if (!steps.length) return null;
-  return <section className="agent-reasoning-summary">
-    <header><span>{zh ? '可读推理摘要' : 'Readable reasoning summary'}</span><small>{zh ? '经过整理且有证据支持，不是原始思维链' : 'Evidence-backed summary, not private chain-of-thought'}</small></header>
+  return <details className="agent-reasoning-summary">
+    <summary>{zh ? '查看分析依据' : 'View analysis rationale'}</summary>
     <ol>{steps.map((step, index) => <li key={`${step.title}-${index}`}><b>{step.title}</b><p>{step.detail}</p><small>{zh ? `${step.evidenceRefs.length} 条证据引用` : `${step.evidenceRefs.length} evidence reference${step.evidenceRefs.length === 1 ? '' : 's'}`}</small></li>)}</ol>
-  </section>;
+  </details>;
 }

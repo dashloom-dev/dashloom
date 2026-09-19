@@ -61,7 +61,7 @@ export async function POST(request: Request) {
           try {
             send({ type: 'conversation', conversationId });
             const result = await runWorkspaceAgent(workspace.id, parsed.data.question, preset, 'chat', conversationId, scope, { abortSignal: signal, images, onTextDelta: (text) => send({ type: 'text_delta', text }), onTextReset: () => send({ type: 'text_reset' }), onProgress: (progress) => send({ type: 'progress', progress }) });
-            send({ type: 'complete', conversationId, runId: result.runId });
+            send({ type: 'complete', conversationId, runId: result.runId, findings: result.findings });
           } catch (error) {
             const failure = classifyAgentFailure(error);
             send({ type: 'error', code: failure.code, error: failure.message });

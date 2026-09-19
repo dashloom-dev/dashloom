@@ -5,7 +5,7 @@ import { getDb } from '@/db';
 import { jsonText } from '@/db/dialect';
 import { agentConversations, agentGrowthMissions, agentProfiles, agentSkillManifests, aiProviderAccounts, aiUsageEvents, analysisRuns, competitorMetricPoints, competitors, metricPoints, productGoals, products } from '@/db/schema';
 import { decryptSecret } from './crypto';
-import { ensureAgentEvidenceDisclosure, validateAgentCitations } from './agent-validation';
+import { ensureReadableReasoningSummary, ensureAgentEvidenceDisclosure, validateAgentCitations } from './agent-validation';
 import { addRollupValue, finishRollup, type RollupAccumulator } from './metric-rollup';
 import { calculateProductHealth } from './product-health';
 import { agentMetricAllowed, agentQueryableMetrics, agentSpecialistDomains } from './agent-metric-policy';
@@ -66,19 +66,6 @@ export const agentResultSchema = z.preprocess(normalizeAgentResultInput, z.objec
   findings: z.array(findingSchema).min(1).max(8),
 }));
 export type AgentResult = z.infer<typeof agentResultSchema>;
-
-function ensureReadableReasoningSummary(result: AgentResult): AgentResult {
-  if (result.reasoningSummary?.length) return result;
-  const primary = result.findings[0];
-  const evidenceRefs = [...new Set(result.findings.slice(0, 3).flatMap((finding) => finding.evidenceRefs))].slice(0, 8);
-  return {
-    ...result,
-    reasoningSummary: [
-      { title: 'Evidence-backed conclusion', detail: result.summary, evidenceRefs },
-      { title: 'Highest-priority judgment', detail: `${primary.title}: ${primary.detail}`, evidenceRefs: primary.evidenceRefs },
-    ],
-  };
-}
 
 function day(offset: number) { return new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10); }
 function metricCurrency(dimensionsJson: string) { try { const value = JSON.parse(dimensionsJson) as { currency?: unknown }; return typeof value.currency === 'string' && /^[a-z]{3}$/i.test(value.currency) ? value.currency.toLowerCase() : null; } catch { return null; } }
@@ -318,7 +305,7 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
               : /Truncated evidence/i.test(message) ? 'truncation_disclosure_missing'
                 : 'citation_validation_failed';
       console.warn(JSON.stringify({ event: 'agent_provider_citation_invalid', attempt, providerId: provider.id, providerMode: provider.mode, model, finishReason: candidate.finishReason, textLength: candidate.text.length, reason }));
-      throw new AgentOutputFormatError('The AI provider returned findings that did not match the supplied evidence. Try again.');
+      throw new AgentOutputFormatError('The AI provider returned findings that did not match the supplied evidence. Try again.', message);
     }
   };
   let findings: AgentResult;
@@ -327,6 +314,7 @@ export async function invokeAgentProvider(workspaceId: string, provider: AgentPr
     if (!(initialError instanceof AgentOutputFormatError)) throw initialError;
     const repair = buildAgentRepairRequest({
       draft: result.text,
+      validationFeedback: initialError.repairFeedback,
       evidenceIds: [...evidence.series, ...evidence.competitors, ...evidence.competitorTrends, ...evidence.crossSignals, ...evidence.healthScores, ...evidence.goals, ...evidence.missions, ...(evidence.images || [])].map((item) => item.evidenceId),
       productIds: evidence.products.map((product) => product.id),
       truncated: evidence.truncated,
