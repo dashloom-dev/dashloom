@@ -272,3 +272,12 @@
 .agent-image-previews{padding:10px 12px 0;display:flex;flex-wrap:wrap;gap:9px}.agent-image-previews figure{position:relative;width:76px;margin:0}.agent-image-previews img{width:76px;height:58px;display:block;object-fit:cover;border:1px solid rgba(142,185,171,.25);border-radius:7px;background:#061a22}.agent-image-previews button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;padding:0;color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:#283d42;cursor:pointer}.agent-image-previews figcaption{margin-top:3px;color:#71877f;font-size:10px;text-align:center}.agent-attachment-control{display:flex;align-items:center;gap:6px;flex:0 0 auto}.agent-attach-button{min-height:30px;padding:0 8px;color:#79e7bd;border:1px solid rgba(84,230,173,.24);border-radius:6px;background:rgba(84,230,173,.06);cursor:pointer}.agent-attach-button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){.business-discovery-results>header,.business-discovery-row{grid-template-columns:minmax(120px,.6fr) minmax(220px,1.4fr) 110px}.agent-composer-toolbar{align-items:stretch;flex-direction:column}}
 @media(max-width:760px){.connection-steps,.business-connection-steps{grid-template-columns:1fr}.business-connection-steps li{justify-content:flex-start}.business-connection-steps li::after{display:none}.business-discovery-results>header{display:none}.business-discovery-row{padding:13px;grid-template-columns:1fr}.business-discovery-row select{min-width:0}}
+
+.overview-header-actions { display:flex; align-items:flex-start; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.overview-manual-sync { max-width:340px; }
+.overview-manual-sync button { display:inline-flex; align-items:center; gap:8px; }
+.overview-manual-sync button[aria-busy='true'] svg { animation:agent-feedback-spin 1s linear infinite; }
+.overview-manual-sync .form-message { margin:8px 0 0; font-size:12px; }
+.overview-manual-sync details { margin-top:8px; font-size:12px; overflow-wrap:anywhere; }
+.overview-manual-sync summary { cursor:pointer; }
+@media(prefers-reduced-motion:reduce){.overview-manual-sync button[aria-busy='true'] svg{animation:none}}
