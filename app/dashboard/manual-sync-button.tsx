@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw } from 'lucide-react';
+import { CheckCircle2, CircleAlert, RefreshCw } from 'lucide-react';
 import type { ManualSyncTarget } from '@/lib/manual-sync';
 
 export function ManualSyncButton({ targets, zh }: { targets: ManualSyncTarget[]; zh: boolean }) {
@@ -37,8 +37,8 @@ export function ManualSyncButton({ targets, zh }: { targets: ManualSyncTarget[];
       }
       setIssues(failures);
       setMessage(zh
-        ? '同步结束：' + completed + '/' + targets.length + ' 个来源完成，写入 ' + written.toLocaleString() + ' 条数据' + (failures.length ? '，' + failures.length + ' 个来源需处理' : '') + '。'
-        : 'Sync finished: ' + completed + '/' + targets.length + ' sources completed, ' + written.toLocaleString() + ' points written' + (failures.length ? ', ' + failures.length + ' sources need attention' : '') + '.');
+        ? `${completed}/${targets.length} 个来源同步完成 · 写入 ${written.toLocaleString('zh-CN')} 条数据${failures.length ? ` · ${failures.length} 个来源需处理` : ''}`
+        : `${completed}/${targets.length} sources synced · ${written.toLocaleString('en-US')} points written${failures.length ? ` · ${failures.length} ${failures.length === 1 ? 'source needs' : 'sources need'} attention` : ''}`);
     } finally {
       running.current = false;
       setPending(false);
@@ -51,7 +51,12 @@ export function ManualSyncButton({ targets, zh }: { targets: ManualSyncTarget[];
       <RefreshCw size={16} aria-hidden="true" />
       {pending ? (zh ? '正在同步…' : 'Syncing…') : (zh ? '手动同步数据' : 'Sync data now')}
     </button>
-    {message && <p className="form-message" role="status">{message}</p>}
-    {issues.length > 0 && <details><summary>{zh ? '查看同步问题' : 'View sync issues'}</summary><ul>{issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul><a href="/dashboard/sources">{zh ? '前往数据源检查配置' : 'Check source settings'}</a></details>}
+    {message && <section className="overview-sync-feedback" data-tone={pending ? 'pending' : issues.length ? 'warning' : 'success'}>
+      <div className="overview-sync-status" role="status">
+        {pending ? <RefreshCw size={17} aria-hidden="true" /> : issues.length ? <CircleAlert size={17} aria-hidden="true" /> : <CheckCircle2 size={17} aria-hidden="true" />}
+        <p>{message}</p>
+      </div>
+      {issues.length > 0 && <details className="overview-sync-details"><summary>{zh ? '查看同步问题' : 'View sync issues'} <span>({issues.length})</span></summary><div><ul>{issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul><a href="/dashboard/sources">{zh ? '检查数据源配置' : 'Check source settings'} →</a></div></details>}
+    </section>}
   </div>;
 }

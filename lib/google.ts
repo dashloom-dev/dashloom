@@ -107,21 +107,62 @@ async function discoverResources(token: string) {
   return [...ga4, ...gsc];
 }
 
-async function replaceResources(workspaceId: string, connectorId: string, resources: GoogleResource[]) {
+async function reconcileGoogleMappings(workspaceId: string, connectorId: string, resources: GoogleResource[]) {
   const db = getDb();
-  await db.delete(connectorResources).where(eq(connectorResources.connectorAccountId, connectorId));
-  for (const resource of resources) await db.insert(connectorResources).values({ id: crypto.randomUUID(), workspaceId, connectorAccountId: connectorId, type: resource.type, resourceId: resource.resourceId, displayName: resource.displayName, domainsJson: JSON.stringify(resource.domains), permissionLevel: resource.permissionLevel });
+  const discovered = new Map(resources.map((resource) => [`${resource.type}:${resource.resourceId}`, resource]));
+  const connectorMappings = await db.select().from(productConnectorMappings).where(and(
+    eq(productConnectorMappings.workspaceId, workspaceId),
+    eq(productConnectorMappings.connectorAccountId, connectorId),
+    inArray(productConnectorMappings.source, ['ga4', 'gsc']),
+  ));
+  for (const mapping of connectorMappings) {
+    const resource = discovered.get(`${mapping.source}:${mapping.resourceId}`);
+    await db.update(productConnectorMappings).set({
+      enabled: Boolean(resource),
+      ...(resource ? { resourceLabel: resource.displayName } : {}),
+      updatedAt: new Date().toISOString(),
+    }).where(and(eq(productConnectorMappings.id, mapping.id), eq(productConnectorMappings.workspaceId, workspaceId)));
+  }
   const productRows = await db.select().from(products).where(eq(products.workspaceId, workspaceId));
   for (const product of productRows) {
     const domain = normalizeDomain(product.domain);
     if (!domain) continue;
     for (const source of ['ga4', 'gsc'] as const) {
-      const existing = await db.select({ id: productConnectorMappings.id }).from(productConnectorMappings).where(and(eq(productConnectorMappings.productId, product.id), eq(productConnectorMappings.source, source))).limit(1);
-      if (existing.length) continue;
       const matches = resources.filter((resource) => resource.type === source && resource.domains.includes(domain));
-      if (matches.length === 1) await db.insert(productConnectorMappings).values({ id: crypto.randomUUID(), workspaceId, productId: product.id, connectorAccountId: connectorId, source, resourceId: matches[0].resourceId, resourceLabel: matches[0].displayName, enabled: true });
+      if (matches.length !== 1) continue;
+      const existing = await db.select().from(productConnectorMappings).where(and(
+        eq(productConnectorMappings.workspaceId, workspaceId),
+        eq(productConnectorMappings.productId, product.id),
+        eq(productConnectorMappings.source, source),
+      ));
+      if (existing.some((mapping) => mapping.enabled)) continue;
+      const exact = existing.find((mapping) => mapping.resourceId === matches[0].resourceId);
+      if (exact) {
+        await db.update(productConnectorMappings).set({ connectorAccountId: connectorId, resourceLabel: matches[0].displayName, enabled: true, updatedAt: new Date().toISOString() }).where(and(eq(productConnectorMappings.id, exact.id), eq(productConnectorMappings.workspaceId, workspaceId)));
+      } else {
+        await db.insert(productConnectorMappings).values({ id: crypto.randomUUID(), workspaceId, productId: product.id, connectorAccountId: connectorId, source, resourceId: matches[0].resourceId, resourceLabel: matches[0].displayName, enabled: true });
+      }
     }
   }
+}
+
+async function replaceResources(workspaceId: string, connectorId: string, resources: GoogleResource[]) {
+  const db = getDb();
+  // Preserve the previous discovery if the new snapshot cannot be written completely.
+  await db.batch([
+    db.delete(connectorResources).where(and(eq(connectorResources.workspaceId, workspaceId), eq(connectorResources.connectorAccountId, connectorId))),
+    ...resources.map((resource) => db.insert(connectorResources).values({ id: crypto.randomUUID(), workspaceId, connectorAccountId: connectorId, type: resource.type, resourceId: resource.resourceId, displayName: resource.displayName, domainsJson: JSON.stringify(resource.domains), permissionLevel: resource.permissionLevel })),
+  ]);
+  await reconcileGoogleMappings(workspaceId, connectorId, resources);
+}
+
+function storedGoogleResources(rows: Array<typeof connectorResources.$inferSelect>): GoogleResource[] {
+  return rows.flatMap((row) => {
+    if (row.type !== 'ga4' && row.type !== 'gsc') return [];
+    let domains: string[] = [];
+    try { const parsed = JSON.parse(row.domainsJson); if (Array.isArray(parsed)) domains = parsed.filter((value): value is string => typeof value === 'string'); } catch { /* Invalid historical discovery metadata has no domains. */ }
+    return [{ type: row.type, resourceId: row.resourceId, displayName: row.displayName, domains, permissionLevel: row.permissionLevel }];
+  });
 }
 
 export async function completeGoogleAuthorization(state: string, code: string) {
@@ -131,36 +172,56 @@ export async function completeGoogleAuthorization(state: string, code: string) {
   await getDb().delete(oauthStates).where(eq(oauthStates.id, row.id));
   const verifier = await decryptSecret(row.encryptedVerifier, `oauth-state:${row.id}`);
   const tokens = await exchangeCode(code, verifier, row.redirectUri);
-  if (!tokens.refresh_token) throw new Error('Google did not return a refresh token. Revoke the old grant and connect again.');
   const identity = await fetchJson<{ sub: string; email?: string }>('https://www.googleapis.com/oauth2/v3/userinfo', tokens.access_token);
   const [existing] = await getDb().select().from(connectorAccounts).where(and(eq(connectorAccounts.workspaceId, row.workspaceId), eq(connectorAccounts.provider, 'google'), eq(connectorAccounts.externalAccountId, identity.sub))).limit(1);
   const connectorId = existing?.id || crypto.randomUUID();
-  const encryptedCredentials = await encryptSecret(JSON.stringify({ refreshToken: tokens.refresh_token, scopes: tokens.scope || GOOGLE_SCOPES.join(' ') } satisfies GoogleCredentials), `connector:${row.workspaceId}:${connectorId}`);
+  if (!tokens.refresh_token && !existing?.encryptedCredentials) throw new Error('Google did not return a refresh token. Revoke the old grant and connect again.');
+  const encryptedCredentials = tokens.refresh_token ? await encryptSecret(JSON.stringify({ refreshToken: tokens.refresh_token, scopes: tokens.scope || GOOGLE_SCOPES.join(' ') } satisfies GoogleCredentials), `connector:${row.workspaceId}:${connectorId}`) : existing!.encryptedCredentials!;
   if (existing) await getDb().update(connectorAccounts).set({ displayName: identity.email || 'Google account', encryptedCredentials, status: 'pending', lastCheckedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(connectorAccounts.id, connectorId));
   else await getDb().insert(connectorAccounts).values({ id: connectorId, workspaceId: row.workspaceId, provider: 'google', externalAccountId: identity.sub, displayName: identity.email || 'Google account', encryptedCredentials, status: 'pending', lastCheckedAt: new Date().toISOString() });
-  const resources = await discoverResources(tokens.access_token);
-  await replaceResources(row.workspaceId, connectorId, resources);
+  let resources: GoogleResource[];
+  try {
+    resources = await discoverResources(tokens.access_token);
+    await replaceResources(row.workspaceId, connectorId, resources);
+  } catch (error) {
+    await getDb().update(connectorAccounts).set({ status: 'attention', updatedAt: new Date().toISOString() }).where(eq(connectorAccounts.id, connectorId));
+    throw error;
+  }
   await getDb().update(connectorAccounts).set({ status: 'connected', lastCheckedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(connectorAccounts.id, connectorId));
-  return { workspaceId: row.workspaceId, connectorId, resourceCount: resources.length };
+  const firstSync = await syncGoogleWorkspace(row.workspaceId).catch(() => null);
+  return { workspaceId: row.workspaceId, connectorId, resourceCount: resources.length, firstSync };
 }
 
 async function upsertPoints(points: Array<typeof metricPoints.$inferInsert>) {
-  for (let index = 0; index < points.length; index += 10) await getDb().insert(metricPoints).values(points.slice(index, index + 10)).onConflictDoUpdate({ target: [metricPoints.workspaceId, metricPoints.productId, metricPoints.source, metricPoints.metric, metricPoints.metricDate, metricPoints.dimensionsJson], set: { value: sql`excluded.value`, collectedAt: sql`excluded.collected_at` } });
+  const db = getDb();
+  const statements = [];
+  for (let index = 0; index < points.length; index += 10) statements.push(db.insert(metricPoints).values(points.slice(index, index + 10)).onConflictDoUpdate({ target: [metricPoints.workspaceId, metricPoints.productId, metricPoints.source, metricPoints.metric, metricPoints.metricDate, metricPoints.dimensionsJson], set: { value: sql`excluded.value`, collectedAt: sql`excluded.collected_at` } }));
+  for (let index = 0; index < statements.length; index += 100) {
+    const [first, ...rest] = statements.slice(index, index + 100);
+    if (first) await db.batch([first, ...rest]);
+  }
 }
 
 export async function syncGoogleWorkspace(workspaceId: string) {
   const db = getDb();
-  const connectors = await db.select().from(connectorAccounts).where(and(eq(connectorAccounts.workspaceId, workspaceId), eq(connectorAccounts.provider, 'google'), eq(connectorAccounts.status, 'connected')));
-  if (!connectors.length) throw new Error('No connected Google account was found.');
+  const connectors = await db.select().from(connectorAccounts).where(and(eq(connectorAccounts.workspaceId, workspaceId), eq(connectorAccounts.provider, 'google'), inArray(connectorAccounts.status, ['pending', 'connected', 'attention'])));
+  if (!connectors.length) throw new Error('No active Google account was found. Authorize Google data first.');
   let total = 0;
   const errors: string[] = [];
   for (const connector of connectors) {
     const runId = crypto.randomUUID();
     await db.insert(syncRuns).values({ id: runId, workspaceId, connectorAccountId: connector.id, source: 'google', status: 'running', startedAt: new Date().toISOString() });
     try {
-      if (!connector.encryptedCredentials) throw new Error('Google refresh credentials are missing.');
+      if (!connector.encryptedCredentials) throw new Error('Google refresh credentials are missing. Authorize Google data again.');
       const credentials = JSON.parse(await decryptSecret(connector.encryptedCredentials, `connector:${workspaceId}:${connector.id}`)) as GoogleCredentials;
       const token = await accessToken(credentials.refreshToken);
+      if (connector.status !== 'connected') {
+        // Interrupted authorization may have left an incomplete resource list.
+        await replaceResources(workspaceId, connector.id, await discoverResources(token));
+      } else {
+        const storedResources = await db.select().from(connectorResources).where(and(eq(connectorResources.workspaceId, workspaceId), eq(connectorResources.connectorAccountId, connector.id), inArray(connectorResources.type, ['ga4', 'gsc'])));
+        await reconcileGoogleMappings(workspaceId, connector.id, storedGoogleResources(storedResources));
+      }
       const mappings = await db.select({ mapping: productConnectorMappings, product: products }).from(productConnectorMappings).innerJoin(products, eq(productConnectorMappings.productId, products.id)).where(and(eq(productConnectorMappings.workspaceId, workspaceId), eq(productConnectorMappings.connectorAccountId, connector.id), eq(productConnectorMappings.enabled, true)));
       const results = await Promise.allSettled(mappings.map(async ({ mapping, product }) => {
         if (mapping.source === 'ga4') return syncGa4Mapping(workspaceId, product.id, product.domain, mapping.resourceId, token);

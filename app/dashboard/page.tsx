@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lte, max, notInArray, sql } from 'drizzle-orm';
-import { ArrowDownRight, ArrowUpRight, Bot, Boxes, CalendarDays, Check, CircleAlert, Database } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Boxes, CalendarDays, Check, CircleAlert, Database } from 'lucide-react';
 import { getDb } from '@/db';
 import { agentActions, aiProviderAccounts, analysisRuns, connectorAccounts, dashboardViews, metricPoints, productConnectorMappings, productGoals, products, reportSchedules, syncRuns, workspaces } from '@/db/schema';
 import { requireServerSession } from '@/lib/session';
@@ -14,6 +14,8 @@ import { dashboardComparisonWindow } from '@/lib/dashboard-period';
 import { dashboardTemplates, parseDashboardConfiguration } from '@/lib/dashboard-templates';
 import { aggregateDashboardRows, buildDashboardMetricCards, selectDashboardMetrics, dashboardBreakdownMetrics, humanize, formatMetric } from '@/lib/dashboard-summary';
 import { ManualSyncButton } from './manual-sync-button';
+import { OverviewActions, OverviewReport } from './overview-insights';
+import './overview.css';
 import { manualSyncTargets } from '@/lib/manual-sync';
 
 export default async function DashboardOverview() {
@@ -57,7 +59,7 @@ export default async function DashboardOverview() {
   const activation = buildActivationProgress({ productCount: productRows.length, sourceReady: sourceMappings.length > 0, recentEvidenceCount: healthPoints.length, modelReady: connectedProviders.length > 0, successfulAnalysisCount: latestAnalysisRows.length, actedOnFindingCount: actedOnFindings.length, reportScheduleCount: enabledSchedules.length });
   const firstValue = buildFirstValueGuide({ productCount: productRows.length, sourceReady: sourceMappings.length > 0, recentEvidenceCount: healthPoints.length, modelReady: connectedProviders.length > 0, successfulAnalysisCount: latestAnalysisRows.length });
 
-  return <div className="app-page">
+  return <div className="app-page overview-page">
     <header className="app-page-head"><div><span>{zh ? '工作空间总览' : 'WORKSPACE OVERVIEW'}</span><h1>{zh ? `你好，${user.name.split(' ')[0]}。` : `Good morning, ${user.name.split(' ')[0]}.`}</h1><p>{empty ? (zh ? '添加第一个产品，开始连接真实数据。' : 'Add your first product to begin connecting real data.') : (zh ? `正在监控工作空间中的 ${productRows.length} 个活跃产品。` : `Monitoring ${productRows.length} active product${productRows.length === 1 ? '' : 's'} across your workspace.`)}</p></div><div className="overview-header-actions"><ManualSyncButton targets={manualSyncTargets(sourceMappings, workspace.role)} zh={zh} /><LinkButton zh={zh} /></div></header>
     <section className="dashboard-status-strip overview-status-strip">
       <div><Boxes size={17} /><span>{zh ? '活跃产品' : 'Active products'}</span><strong>{productRows.length}</strong></div>
@@ -75,8 +77,8 @@ export default async function DashboardOverview() {
       <div className="activation-progress" role="progressbar" aria-label="First value path" aria-valuemin={0} aria-valuemax={activation.total} aria-valuenow={activation.completed}><i style={{ width: `${(activation.completed / activation.total) * 100}%` }} /></div>
       <div className="activation-steps">{activation.milestones.map((milestone, index) => <Link key={milestone.id} href={milestone.href} data-state={milestone.state}><b>{milestone.complete ? <Check size={15} /> : index + 1}</b><span><strong>{milestone.title}</strong><small>{milestone.description}</small></span></Link>)}</div>
     </section>}
-    <section className="agent-highlight"><div className="agent-avatar"><Bot size={24} /></div><div><span>DASHLOOM AGENT{latestAnalysis ? ` · ${latestAnalysis.createdAt.slice(0, 10)}` : ''}</span><h2>{latestAnalysis?.summary || (empty ? (zh ? 'Agent 正在等待证据。' : 'Your Agent is waiting for evidence.') : (zh ? '第一份证据简报会显示在这里。' : 'Your first evidence brief will appear here.'))}</h2><p>{latestAnalysis?.action ? `${zh ? '优先行动' : 'Priority action'}: ${latestAnalysis.action}` : empty ? (zh ? '添加产品并连接至少一个数据源；证据层为空时，Agent 不会编造分析。' : 'Add a product and connect at least one data source.') : (zh ? 'Dashloom 正在积累足够的历史数据。' : 'Dashloom is collecting enough history to cite every finding.')}</p></div><Link href={latestAnalysis ? `/dashboard/agent/runs/${latestAnalysis.id}` : '/dashboard/agent'}>{latestAnalysis ? (zh ? '检查证据 →' : 'Inspect evidence →') : (zh ? '打开 Agent →' : 'Open Agent →')}</Link></section>
-    {openActions.length > 0 && <section className="app-panel overview-actions"><div className="panel-title"><div><span>AGENT ACTION CENTER</span><h2>{openActions.length} highest-priority open moves</h2></div><a href="/dashboard/actions">Manage all →</a></div>{openActions.map((action) => <article className="report-row" key={action.id}><div><strong>{action.title}</strong><small>{action.recommendedAction} · seen {action.occurrenceCount}×</small></div><span>{action.severity}</span><b data-status={action.status}>{action.status.replaceAll('_', ' ')}</b></article>)}</section>}
+    <OverviewReport analysis={latestAnalysis} empty={empty} zh={zh} />
+    <OverviewActions actions={openActions} zh={zh} />
     {operatingGoals.length > 0 && <section className="app-panel overview-goals"><div className="panel-title"><div><span>OPERATING TARGETS</span><h2>Progress the Agent can reason about</h2></div><a href="/dashboard/products">Manage goals →</a></div>{operatingGoals.slice(0, 4).map((goal) => <article className="report-row" key={goal.goalId}><div><strong>{goal.productName} · {goal.name}</strong><small>{goal.metric} · rolling {goal.period} · {goal.currentValue === null ? 'waiting for data' : `${goal.progressPercent?.toFixed(1)}% of target`}</small></div><span>{goal.currentValue === null ? '—' : goal.currentValue.toLocaleString()} / {goal.targetValue.toLocaleString()}</span><b data-status={goal.status}>{goal.status.replaceAll('_', ' ')}</b></article>)}</section>}
     <div className="overview-columns">
       <section className="app-panel"><div className="panel-title"><div><span>PRODUCT PORTFOLIO</span><h2>Deterministic product health</h2></div><a href="/dashboard/products">Manage products →</a></div>{empty ? <EmptyProducts /> : <div className="real-product-list">{productRows.slice(0, 6).map((product) => { const health = productHealth.get(product.id); return <article key={product.id}><div>{product.name.slice(0, 1).toUpperCase()}</div><span><strong>{product.name}</strong><small>{health?.reasons[0] || product.domain || 'No metric evidence yet'}</small></span><b data-status={health?.status}>{health ? `${health.score}/100` : '—'}</b></article>; })}</div>}</section>
