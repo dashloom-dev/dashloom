@@ -59,6 +59,10 @@ test('dashboard comparisons handle zero baselines and negative prior values with
 
 test('shared dashboard formatting covers localized labels and operational units', () => {
   assert.equal(humanize('active_users', 'zh'), '活跃用户');
+  assert.equal(humanize('ctr', 'zh'), '点击率');
+  assert.equal(humanize('ctr', 'en'), 'CTR');
+  assert.equal(humanize('active_subscriptions', 'zh'), '有效订阅');
+  assert.equal(humanize('active_subscriptions', 'en'), 'Active subscriptions');
   assert.equal(formatMetric('revenue', 0, null, 'zh'), '0（未设置币种）');
   assert.match(formatMetric('revenue', 12, 'usd', 'en'), /12/);
   assert.equal(formatMetric('r2_payload_bytes', 2048), '2 KB');
